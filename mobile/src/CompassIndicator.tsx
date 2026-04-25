@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 const H = 22;   // arrow half-height
 const W = 28;   // arrow length
-const GAP = 36; // gap from screen centre to arrow base
+const EDGE = 8; // margin from screen edge to arrow tip
 
 function indicatorColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
@@ -13,7 +13,7 @@ function indicatorColor(diff: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-// borderRight coloured → ◁  (tip left, base right — borderRight occupies space to the RIGHT of element x)
+// borderRight coloured → ◁  (tip at element x, base W pixels to the right)
 function LeftArrow({ color, size = 1 }: { color: string; size?: number }) {
   return (
     <View style={{
@@ -33,7 +33,7 @@ function LeftArrow({ color, size = 1 }: { color: string; size?: number }) {
   );
 }
 
-// borderLeft coloured → ▷  (tip right, base left — borderLeft occupies space to the LEFT of element x)
+// borderLeft coloured → ▷  (tip at element x, base W pixels to the left)
 function RightArrow({ color, size = 1 }: { color: string; size?: number }) {
   return (
     <View style={{
@@ -63,22 +63,20 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {showLeft && (
         <>
-          {/* Inner arrow — closer to dot */}
-          <View style={[styles.anchor, { transform: [{ translateX: -GAP }] }]}>
+          <View style={[styles.leftEdge, { left: EDGE }]}>
             <LeftArrow color={color} />
           </View>
-          {/* Outer arrow — smaller, lower opacity */}
-          <View style={[styles.anchor, { transform: [{ translateX: -(GAP + W + 10) }], opacity: 0.45 }]}>
+          <View style={[styles.leftEdge, { left: EDGE + W + 8, opacity: 0.45 }]}>
             <LeftArrow color={color} size={0.7} />
           </View>
         </>
       )}
       {showRight && (
         <>
-          <View style={[styles.anchor, { transform: [{ translateX: GAP }] }]}>
+          <View style={[styles.rightEdge, { right: EDGE }]}>
             <RightArrow color={color} />
           </View>
-          <View style={[styles.anchor, { transform: [{ translateX: GAP + W + 10 }], opacity: 0.45 }]}>
+          <View style={[styles.rightEdge, { right: EDGE + W + 8, opacity: 0.45 }]}>
             <RightArrow color={color} size={0.7} />
           </View>
         </>
@@ -88,10 +86,12 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
 }
 
 const styles = StyleSheet.create({
-  // 0×0 absolute anchor at screen centre — arrows expand from their own borders
-  anchor: {
+  leftEdge: {
     position: 'absolute',
-    left: '50%',
+    top: '50%',
+  },
+  rightEdge: {
+    position: 'absolute',
     top: '50%',
   },
 });
