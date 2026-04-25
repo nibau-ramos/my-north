@@ -13,28 +13,8 @@ function indicatorColor(diff: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-// borderLeft coloured → ◁  (tip left, base right, base at element x)
+// borderRight coloured → ◁  (tip left, base right — borderRight occupies space to the RIGHT of element x)
 function LeftArrow({ color, size = 1 }: { color: string; size?: number }) {
-  return (
-    <View style={{
-      width: 0, height: 0,
-      borderTopWidth: H * size,
-      borderBottomWidth: H * size,
-      borderLeftWidth: W * size,
-      borderStyle: 'solid',
-      borderTopColor: 'transparent',
-      borderBottomColor: 'transparent',
-      borderLeftColor: color,
-      shadowColor: color,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.85,
-      shadowRadius: 8,
-    }} />
-  );
-}
-
-// borderRight coloured → ▷  (tip right, base left, base at element x)
-function RightArrow({ color, size = 1 }: { color: string; size?: number }) {
   return (
     <View style={{
       width: 0, height: 0,
@@ -45,6 +25,26 @@ function RightArrow({ color, size = 1 }: { color: string; size?: number }) {
       borderTopColor: 'transparent',
       borderBottomColor: 'transparent',
       borderRightColor: color,
+      shadowColor: color,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.85,
+      shadowRadius: 8,
+    }} />
+  );
+}
+
+// borderLeft coloured → ▷  (tip right, base left — borderLeft occupies space to the LEFT of element x)
+function RightArrow({ color, size = 1 }: { color: string; size?: number }) {
+  return (
+    <View style={{
+      width: 0, height: 0,
+      borderTopWidth: H * size,
+      borderBottomWidth: H * size,
+      borderLeftWidth: W * size,
+      borderStyle: 'solid',
+      borderTopColor: 'transparent',
+      borderBottomColor: 'transparent',
+      borderLeftColor: color,
       shadowColor: color,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.85,
