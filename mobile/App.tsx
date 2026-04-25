@@ -1,0 +1,350 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import MapView, { PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import CompassHeading from 'react-native-compass-heading';
+import { CompassIndicator } from './src/CompassIndicator';
+import { FlyingHeart } from './src/FlyingHeart';
+
+const WORLD_REGION = {
+  latitude: 20,
+  longitude: 0,
+  latitudeDelta: 160,
+  longitudeDelta: 360,
+};
+
+const TARGET = {
+  latitude: -8.039977532613815,
+  longitude: -34.886511493765695,
+};
+
+const ALIGNED_THRESHOLD = 10;
+
+function getBearing(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const φ1 = toRad(from.latitude);
+  const φ2 = toRad(to.latitude);
+  const Δλ = toRad(to.longitude - from.longitude);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+function haversineKm(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function zoomForDistance(km: number): number {
+  if (km < 0.5) return 17;
+  if (km < 2) return 15;
+  if (km < 10) return 13;
+  if (km < 50) return 10;
+  if (km < 200) return 8;
+  if (km < 1000) return 6;
+  if (km < 4000) return 4;
+  return 3;
+}
+
+function normalizeDiff(angle: number): number {
+  let a = angle % 360;
+  if (a > 180) a -= 360;
+  if (a < -180) a += 360;
+  return a;
+}
+
+function lineColor(diff: number): string {
+  const t = Math.max(0, 1 - Math.abs(diff) / 90);
+  const r = Math.round(255 * (1 - t));
+  const g = Math.round(82 + 148 * t);
+  const b = Math.round(82 + 36 * t);
+  return `rgb(${r},${g},${b})`;
+}
+
+function easeInOut(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+interface HeartEntry {
+  id: number;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  size: number;
+}
+
+export default function App() {
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const mapRef = useRef<MapView>(null);
+  const zoomDone = useRef(false);
+  const alignedZoom = useRef(false);
+  const headingRef = useRef(0);
+  const userLocation = useRef<{ latitude: number; longitude: number } | null>(null);
+
+  const [showIndicator, setShowIndicator] = useState(false);
+  const [angleDiff, setAngleDiff] = useState(0);
+  const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  // Kiss feature
+  const kissGrowAnim = useRef(new Animated.Value(0)).current;
+  const kissValRef = useRef(0);
+  const isPressingRef = useRef(false);
+  const heartIdRef = useRef(0);
+  const [showGrowingHeart, setShowGrowingHeart] = useState(false);
+  const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
+
+  useEffect(() => {
+    const listenerId = kissGrowAnim.addListener(({ value }) => {
+      kissValRef.current = value;
+    });
+    return () => kissGrowAnim.removeListener(listenerId);
+  }, []);
+
+  useEffect(() => {
+    if (!showIndicator) return;
+
+    CompassHeading.start(3, ({ heading }: { heading: number }) => {
+      headingRef.current = heading;
+      mapRef.current?.animateCamera({ heading }, { duration: 150 });
+
+      if (userLocation.current) {
+        const bearing = getBearing(userLocation.current, TARGET);
+        const diff = normalizeDiff(bearing - heading);
+        setAngleDiff(diff);
+
+        if (Math.abs(diff) < ALIGNED_THRESHOLD && !alignedZoom.current) {
+          alignedZoom.current = true;
+          const km = haversineKm(userLocation.current, TARGET);
+          mapRef.current?.animateCamera(
+            { center: userLocation.current, zoom: zoomForDistance(km), heading },
+            { duration: 1000 },
+          );
+        }
+      }
+    });
+
+    return () => CompassHeading.stop();
+  }, [showIndicator]);
+
+  const onUserLocationChange = useCallback((event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    userLocation.current = { latitude, longitude };
+    setUserPos({ latitude, longitude });
+
+    if (zoomDone.current) return;
+    zoomDone.current = true;
+
+    mapRef.current?.animateCamera(
+      { center: { latitude, longitude }, zoom: 2 },
+      { duration: 800 },
+    );
+
+    setTimeout(() => {
+      const ZOOM_START = 2;
+      const ZOOM_END = 18;
+      const TOTAL_MS = 5000;
+      const STEP_MS = 100;
+      const startTime = Date.now();
+
+      const timer = setInterval(() => {
+        const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
+        const zoom = ZOOM_START + (ZOOM_END - ZOOM_START) * easeInOut(t);
+
+        mapRef.current?.animateCamera(
+          { center: { latitude, longitude }, zoom },
+          { duration: STEP_MS * 2 },
+        );
+
+        if (t >= 1) {
+          clearInterval(timer);
+          setShowIndicator(true);
+        }
+      }, STEP_MS);
+    }, 900);
+  }, []);
+
+  const isAligned = showIndicator && Math.abs(angleDiff) < ALIGNED_THRESHOLD;
+
+  const handleKissPressIn = useCallback(() => {
+    if (isPressingRef.current) return;
+    isPressingRef.current = true;
+    setShowGrowingHeart(true);
+    kissGrowAnim.setValue(0);
+    kissValRef.current = 0;
+    Animated.timing(kissGrowAnim, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: false,
+    }).start();
+  }, [kissGrowAnim]);
+
+  const handleKissPressOut = useCallback(async () => {
+    if (!isPressingRef.current) return;
+    isPressingRef.current = false;
+    kissGrowAnim.stopAnimation();
+    setShowGrowingHeart(false);
+
+    const val = kissValRef.current;
+    if (val < 0.05) return;
+
+    // 36px base * scale (0.5..2.0) → 18..72 visual size
+    const heartSize = Math.round(36 * (0.5 + val * 1.5));
+    const startX = screenW / 2;
+    const startY = screenH / 2;
+
+    try {
+      const pt = await mapRef.current?.pointForCoordinate(TARGET);
+      setFlyingHearts(prev => {
+        if (prev.length >= 5) return prev;
+        return [
+          ...prev,
+          {
+            id: heartIdRef.current++,
+            startX,
+            startY,
+            endX: pt?.x ?? screenW * 0.8,
+            endY: pt?.y ?? screenH * 0.2,
+            size: heartSize,
+          },
+        ];
+      });
+    } catch {}
+  }, [kissGrowAnim, screenW, screenH]);
+
+  const removeHeart = useCallback((id: number) => {
+    setFlyingHearts(prev => prev.filter(h => h.id !== id));
+  }, []);
+
+  const color = lineColor(angleDiff);
+
+  const kissScale = kissGrowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 2.0],
+  });
+
+  return (
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={StyleSheet.absoluteFill}
+          initialRegion={WORLD_REGION}
+          showsUserLocation
+          onUserLocationChange={onUserLocationChange}
+          showsCompass={false}
+          scrollEnabled={false}
+          zoomEnabled
+          rotateEnabled={false}
+          pitchEnabled={false}
+        >
+          {showIndicator && userPos && (
+            <Polyline
+              coordinates={[userPos, TARGET]}
+              strokeColor={color}
+              strokeWidth={3}
+            />
+          )}
+        </MapView>
+
+        {showIndicator && <CompassIndicator angleDiff={angleDiff} />}
+
+        {flyingHearts.length > 0 && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {flyingHearts.map(h => (
+              <FlyingHeart
+                key={h.id}
+                id={h.id}
+                startX={h.startX}
+                startY={h.startY}
+                endX={h.endX}
+                endY={h.endY}
+                size={h.size}
+                onComplete={removeHeart}
+              />
+            ))}
+          </View>
+        )}
+
+        {showGrowingHeart && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Animated.Text
+              style={{
+                position: 'absolute',
+                left: screenW / 2 - 18,
+                top: screenH / 2 - 68,
+                fontSize: 36,
+                transform: [{ scale: kissScale }],
+              }}
+            >
+              ❤️
+            </Animated.Text>
+          </View>
+        )}
+
+        {isAligned && (
+          <View
+            pointerEvents="box-none"
+            style={styles.kissButtonContainer}
+          >
+            <Pressable onPressIn={handleKissPressIn} onPressOut={handleKissPressOut}>
+              {({ pressed }) => (
+                <View
+                  style={[
+                    styles.kissButton,
+                    pressed && styles.kissButtonPressed,
+                    { transform: [{ scale: pressed ? 0.88 : 1 }] },
+                  ]}
+                >
+                  <Text style={styles.kissEmoji}>💋</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        )}
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  kissButtonContainer: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  kissButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ff4d6d',
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  kissButtonPressed: {
+    backgroundColor: 'rgba(255,180,180,0.92)',
+  },
+  kissEmoji: {
+    fontSize: 30,
+  },
+});
