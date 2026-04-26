@@ -20,6 +20,8 @@ const TARGET = {
 
 const ALIGNED_THRESHOLD = 10;
 
+const KISS_EMOJIS = ['❤️', '😘', '😍', '😉'];
+
 function getBearing(
   from: { latitude: number; longitude: number },
   to: { latitude: number; longitude: number },
@@ -84,6 +86,7 @@ interface HeartEntry {
   endX: number;
   endY: number;
   size: number;
+  emoji: string;
 }
 
 export default function App() {
@@ -106,6 +109,7 @@ export default function App() {
   const isPressingRef = useRef(false);
   const kissAnimatingRef = useRef(false);
   const kissOriginRef = useRef({ x: 0, y: 0 });
+  const selectedEmojiRef = useRef('❤️');
   const heartIdRef = useRef(0);
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
@@ -206,8 +210,9 @@ export default function App() {
 
   const isAligned = showIndicator && Math.abs(angleDiff) < ALIGNED_THRESHOLD;
 
-  const handleKissPressIn = useCallback(async () => {
+  const handleKissPressIn = useCallback(async (emoji: string) => {
     if (isPressingRef.current) return;
+    selectedEmojiRef.current = emoji;
     isPressingRef.current = true;
     kissGrowAnim.setValue(0);
     kissOriginRef.current = { x: screenW / 2, y: screenH / 2 };
@@ -262,7 +267,7 @@ export default function App() {
       if (prev.length >= 5) return prev;
       return [
         ...prev,
-        { id: heartIdRef.current++, startX, startY, endX, endY, size: heartSize },
+        { id: heartIdRef.current++, startX, startY, endX, endY, size: heartSize, emoji: selectedEmojiRef.current },
       ];
     });
   }, [kissGrowAnim, screenW, screenH]);
@@ -330,6 +335,7 @@ export default function App() {
                 endX={h.endX}
                 endY={h.endY}
                 size={h.size}
+                emoji={h.emoji}
                 onComplete={removeHeart}
               />
             ))}
@@ -346,29 +352,34 @@ export default function App() {
                 transform: [{ scale: kissScale }],
               }}
             >
-              <Text style={styles.kissEmoji}>❤️</Text>
+              <Text style={styles.kissEmoji}>{selectedEmojiRef.current}</Text>
             </Animated.View>
           </View>
         )}
 
         {isAligned && (
-          <View
-            pointerEvents="box-none"
-            style={styles.kissButtonContainer}
-          >
-            <Pressable onPressIn={handleKissPressIn} onPressOut={handleKissPressOut}>
-              {({ pressed }) => (
-                <View
-                  style={[
-                    styles.kissButton,
-                    pressed && styles.kissButtonPressed,
-                    { transform: [{ scale: pressed ? 0.88 : 1 }] },
-                  ]}
+          <View pointerEvents="box-none" style={styles.kissButtonContainer}>
+            <View style={styles.kissButtonRow}>
+              {KISS_EMOJIS.map(emoji => (
+                <Pressable
+                  key={emoji}
+                  onPressIn={() => handleKissPressIn(emoji)}
+                  onPressOut={handleKissPressOut}
                 >
-                  <Text style={styles.kissEmoji}>💋</Text>
-                </View>
-              )}
-            </Pressable>
+                  {({ pressed }) => (
+                    <View
+                      style={[
+                        styles.kissButton,
+                        pressed && styles.kissButtonPressed,
+                        { transform: [{ scale: pressed ? 0.88 : 1 }] },
+                      ]}
+                    >
+                      <Text style={styles.kissEmoji}>{emoji}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
       </View>
@@ -385,10 +396,14 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
+  kissButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   kissButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: 'rgba(255,255,255,0.88)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -401,7 +416,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,180,180,0.92)',
   },
   kissEmoji: {
-    fontSize: 30,
+    fontSize: 26,
   },
   destinationMarker: {
     width: 38,
