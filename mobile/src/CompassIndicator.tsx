@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 const H = 22;
 const W = 28;
 const EDGE = 8;
+const MARCH = 16;
+const MARCH_MS = 480;
 
 function indicatorColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
@@ -13,7 +15,6 @@ function indicatorColor(diff: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-// borderRight coloured → ◁  (tip at element x, base W pixels to the right)
 function LeftArrow({ color, size = 1 }: { color: string; size?: number }) {
   return (
     <View style={{
@@ -33,7 +34,6 @@ function LeftArrow({ color, size = 1 }: { color: string; size?: number }) {
   );
 }
 
-// borderLeft coloured → ▷  (tip at element x, base W pixels to the left)
 function RightArrow({ color, size = 1 }: { color: string; size?: number }) {
   return (
     <View style={{
@@ -59,51 +59,58 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
   const showLeft = angleDiff < -THRESHOLD;
   const showRight = angleDiff > THRESHOLD;
 
-  const blinkAnim = useRef(new Animated.Value(1)).current;
+  const marchAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Sawtooth: slide smoothly in direction, snap back instantly — creates continuous flow
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(blinkAnim, { toValue: 0.1, duration: 350, useNativeDriver: true }),
-        Animated.timing(blinkAnim, { toValue: 1,   duration: 350, useNativeDriver: true }),
+        Animated.timing(marchAnim, {
+          toValue: 1,
+          duration: MARCH_MS,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(marchAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
       ])
     );
     anim.start();
     return () => anim.stop();
-  }, []);
+  }, [marchAnim]);
+
+  const leftTranslate = marchAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -MARCH] });
+  const rightTranslate = marchAnim.interpolate({ inputRange: [0, 1], outputRange: [0, MARCH] });
+  const opacityMain = marchAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.9, 0.55] });
+  const opacityDim = marchAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.45, 0.38, 0.2] });
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { opacity: blinkAnim }]} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {showLeft && (
         <>
-          <View style={[styles.leftEdge, { left: EDGE }]}>
+          <Animated.View style={[styles.edge, { left: EDGE, opacity: opacityMain, transform: [{ translateX: leftTranslate }] }]}>
             <LeftArrow color={color} />
-          </View>
-          <View style={[styles.leftEdge, { left: EDGE + W + 8, opacity: 0.45 }]}>
+          </Animated.View>
+          <Animated.View style={[styles.edge, { left: EDGE + W + 8, opacity: opacityDim, transform: [{ translateX: leftTranslate }] }]}>
             <LeftArrow color={color} size={0.7} />
-          </View>
+          </Animated.View>
         </>
       )}
       {showRight && (
         <>
-          <View style={[styles.rightEdge, { right: EDGE }]}>
+          <Animated.View style={[styles.edge, { right: EDGE, opacity: opacityMain, transform: [{ translateX: rightTranslate }] }]}>
             <RightArrow color={color} />
-          </View>
-          <View style={[styles.rightEdge, { right: EDGE + W + 8, opacity: 0.45 }]}>
+          </Animated.View>
+          <Animated.View style={[styles.edge, { right: EDGE + W + 8, opacity: opacityDim, transform: [{ translateX: rightTranslate }] }]}>
             <RightArrow color={color} size={0.7} />
-          </View>
+          </Animated.View>
         </>
       )}
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  leftEdge: {
-    position: 'absolute',
-    top: '50%',
-  },
-  rightEdge: {
+  edge: {
     position: 'absolute',
     top: '50%',
   },
