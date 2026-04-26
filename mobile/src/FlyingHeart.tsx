@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Text } from 'react-native';
 
 const FLIGHT_MS = 2400;
@@ -16,6 +16,8 @@ interface Props {
   onComplete: (id: number) => void;
 }
 
+// React.memo stops App's compass re-renders from reaching this component,
+// so the interpolations and animation stay stable for the full flight.
 export const FlyingHeart = React.memo(function FlyingHeart({
   id, startX, startY, endX, endY, size, onComplete,
 }: Props) {
@@ -30,56 +32,34 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     }))
   ).current;
 
-  // Computed once on mount — stable across re-renders so native driver
-  // doesn't lose the animation after parent re-renders.
-  const { tx, ty, sc } = useMemo(() => {
-    const N = 60;
-    const ir = Array.from({ length: N + 1 }, (_, i) => i / N);
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    const px = -dy / len;
-    const py = dx / len;
-    const hs = size * 0.55;
+  const N = 60;
+  const ir = Array.from({ length: N + 1 }, (_, i) => i / N);
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const px = -dy / len;
+  const py = dx / len;
+  const hs = size * 0.55;
 
-    const xOut = ir.map(t => {
-      const osc = AMPLITUDE * Math.sin(t * Math.PI * 2 * OSCILLATIONS) * (1 - t);
-      return startX + t * dx + px * osc - hs;
-    });
-    const yOut = ir.map(t => {
-      const osc = AMPLITUDE * Math.sin(t * Math.PI * 2 * OSCILLATIONS) * (1 - t);
-      return startY + t * dy + py * osc - hs;
-    });
-    const scOut = ir.map(t => 1 - 0.4 * t);
+  const xOut = ir.map(t => {
+    const osc = AMPLITUDE * Math.sin(t * Math.PI * 2 * OSCILLATIONS) * (1 - t);
+    return startX + t * dx + px * osc - hs;
+  });
+  const yOut = ir.map(t => {
+    const osc = AMPLITUDE * Math.sin(t * Math.PI * 2 * OSCILLATIONS) * (1 - t);
+    return startY + t * dy + py * osc - hs;
+  });
+  const scOut = ir.map(t => 1 - 0.4 * t);
 
-    return {
-      tx: progress.interpolate({ inputRange: ir, outputRange: xOut }),
-      ty: progress.interpolate({ inputRange: ir, outputRange: yOut }),
-      sc: progress.interpolate({ inputRange: ir, outputRange: scOut }),
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Frag interpolations also computed once.
-  const fragStyles = useMemo(() => frags.map(f => ({
-    fx: f.anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [endX - 8, endX + Math.cos(f.angle) * f.dist - 8],
-    }),
-    fy: f.anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [endY - 8, endY + Math.sin(f.angle) * f.dist - 8],
-    }),
-    op: f.anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [1, 1, 0] }),
-    fsc: f.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.8, 1.3, 0.4] }),
-  })), // eslint-disable-next-line react-hooks/exhaustive-deps
-  []);
+  const tx = progress.interpolate({ inputRange: ir, outputRange: xOut });
+  const ty = progress.interpolate({ inputRange: ir, outputRange: yOut });
+  const sc = progress.interpolate({ inputRange: ir, outputRange: scOut });
 
   useEffect(() => {
     Animated.timing(progress, {
       toValue: 1,
       duration: FLIGHT_MS,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(({ finished }) => {
       if (!finished) return;
       setExploding(true);
@@ -95,7 +75,16 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     return (
       <>
         {frags.map((f, i) => {
-          const { fx, fy, op, fsc } = fragStyles[i];
+          const fx = f.anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [endX - 8, endX + Math.cos(f.angle) * f.dist - 8],
+          });
+          const fy = f.anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [endY - 8, endY + Math.sin(f.angle) * f.dist - 8],
+          });
+          const op = f.anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [1, 1, 0] });
+          const fsc = f.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.8, 1.3, 0.4] });
           return (
             <Animated.View
               key={i}
