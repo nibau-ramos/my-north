@@ -95,8 +95,10 @@ export default function App() {
   const zoomDone = useRef(false);
   const alignedZoom = useRef(false);
   const isZoomingOut = useRef(false);
+  const isZoomingIn = useRef(false);
   const currentZoom = useRef(2);
   const headingRef = useRef(0);
+  const showIndicatorRef = useRef(false);
   const userLocation = useRef<{ latitude: number; longitude: number } | null>(null);
 
   const [showIndicator, setShowIndicator] = useState(false);
@@ -120,16 +122,15 @@ export default function App() {
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
 
   useEffect(() => {
-    if (!showIndicator) return;
-
     CompassHeading.start(3, ({ heading }: { heading: number }) => {
       headingRef.current = heading;
 
-      if (!isZoomingOut.current) {
+      // During zoom-in the heading is included in each camera step; skip separate call
+      if (!isZoomingIn.current && !isZoomingOut.current) {
         mapRef.current?.animateCamera({ heading }, { duration: 150 });
       }
 
-      if (userLocation.current) {
+      if (showIndicatorRef.current && userLocation.current) {
         const bearing = getBearing(userLocation.current, TARGET);
         const diff = normalizeDiff(bearing - heading);
         setAngleDiff(diff);
@@ -173,7 +174,7 @@ export default function App() {
     });
 
     return () => CompassHeading.stop();
-  }, [showIndicator]);
+  }, []);
 
   const onUserLocationChange = useCallback((event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
@@ -195,18 +196,22 @@ export default function App() {
       const STEP_MS = 100;
       const startTime = Date.now();
 
+      isZoomingIn.current = true;
+
       const timer = setInterval(() => {
         const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
         const zoom = ZOOM_START + (ZOOM_END - ZOOM_START) * easeInOut(t);
 
         currentZoom.current = zoom;
         mapRef.current?.animateCamera(
-          { center: { latitude, longitude }, zoom },
+          { center: { latitude, longitude }, zoom, heading: headingRef.current },
           { duration: STEP_MS * 2 },
         );
 
         if (t >= 1) {
           clearInterval(timer);
+          isZoomingIn.current = false;
+          showIndicatorRef.current = true;
           setShowIndicator(true);
         }
       }, STEP_MS);
