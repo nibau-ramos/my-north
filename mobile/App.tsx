@@ -101,6 +101,9 @@ export default function App() {
   const showIndicatorRef = useRef(false);
   const userLocation = useRef<{ latitude: number; longitude: number } | null>(null);
 
+  const initialHeadingSet = useRef(false);
+  const [initialHeading, setInitialHeading] = useState<number | null>(null);
+
   const [showIndicator, setShowIndicator] = useState(false);
   const [angleDiff, setAngleDiff] = useState(0);
   const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -153,6 +156,13 @@ export default function App() {
   useEffect(() => {
     CompassHeading.start(3, ({ heading }: { heading: number }) => {
       headingRef.current = heading;
+
+      // First reading: set initialCamera heading so map appears already oriented
+      if (!initialHeadingSet.current) {
+        initialHeadingSet.current = true;
+        setInitialHeading(heading);
+        return;
+      }
 
       // During zoom-in the heading is included in each camera step; skip separate call
       if (!isZoomingIn.current && !isZoomingOut.current) {
@@ -324,11 +334,12 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
+        {initialHeading !== null && (
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
           style={StyleSheet.absoluteFill}
-          initialRegion={WORLD_REGION}
+          initialCamera={{ center: { latitude: 20, longitude: 0 }, heading: initialHeading, pitch: 0, zoom: 2 }}
           showsUserLocation
           onUserLocationChange={onUserLocationChange}
           showsCompass={false}
@@ -344,7 +355,7 @@ export default function App() {
               strokeWidth={3}
             />
           )}
-          {showIndicator && (
+          {showIndicator && !showPulse && (
             <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.destinationMarker}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
@@ -352,6 +363,7 @@ export default function App() {
             </Marker>
           )}
         </MapView>
+        )}
 
         {showIndicator && <CompassIndicator angleDiff={angleDiff} />}
 
