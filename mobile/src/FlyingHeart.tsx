@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Text } from 'react-native';
 
 const FLIGHT_MS = 2400;
-const OSCILLATIONS = 2.5;
-const AMPLITUDE = 45;
 const FRAG_COUNT = 6;
 
 interface Props {
@@ -33,6 +31,13 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     }))
   ).current;
 
+  const path = useRef({
+    amplitude: 25 + Math.random() * 50,        // 25..75 px
+    oscillations: 1.5 + Math.random() * 2,     // 1.5..3.5 cycles
+    phase: Math.random() * Math.PI * 2,        // random start angle
+    bias: (Math.random() - 0.5) * 40,          // -20..20 px lateral drift
+  }).current;
+
   const N = 60;
   const ir = Array.from({ length: N + 1 }, (_, i) => i / N);
   const dx = endX - startX;
@@ -43,12 +48,14 @@ export const FlyingHeart = React.memo(function FlyingHeart({
   const hs = size * 0.55;
 
   const xOut = ir.map(t => {
-    const osc = AMPLITUDE * Math.sin(t * Math.PI * 2 * OSCILLATIONS) * (1 - t);
-    return startX + t * dx + px * osc - hs;
+    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations + path.phase) * (1 - t);
+    const drift = path.bias * (1 - t);
+    return startX + t * dx + px * (osc + drift) - hs;
   });
   const yOut = ir.map(t => {
-    const osc = AMPLITUDE * Math.sin(t * Math.PI * 2 * OSCILLATIONS) * (1 - t);
-    return startY + t * dy + py * osc - hs;
+    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations + path.phase) * (1 - t);
+    const drift = path.bias * (1 - t);
+    return startY + t * dy + py * (osc + drift) - hs;
   });
   const scOut = ir.map(t => 1 - 0.4 * t);
 
