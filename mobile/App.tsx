@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import CompassHeading from 'react-native-compass-heading';
 import { CompassIndicator } from './src/CompassIndicator';
 import { FlyingHeart } from './src/FlyingHeart';
+import { PortalParticles } from './src/PortalParticles';
 
 
 const TARGET = {
@@ -72,8 +73,17 @@ interface HeartEntry {
   startY: number;
   endX: number;
   endY: number;
+  userX: number;
+  userY: number;
+  headingAtLaunch: number;
   size: number;
   emoji: string;
+}
+
+interface PortalConfig {
+  destOffsetDx: number;
+  destOffsetDy: number;
+  headingAtCapture: number;
 }
 
 export default function App() {
@@ -114,6 +124,7 @@ export default function App() {
   const heartIdRef = useRef(0);
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
+  const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
 
   const triggerAlignmentZoomOut = useCallback(() => {
     if (alignedZoom.current || !userLocation.current) return;
@@ -229,6 +240,22 @@ export default function App() {
 
   const isAligned = showIndicator && Math.abs(angleDiff) < ALIGNED_THRESHOLD;
 
+  useEffect(() => {
+    if (isAligned) {
+      mapRef.current?.pointForCoordinate(TARGET).then(pt => {
+        if (pt) {
+          setPortalConfig({
+            destOffsetDx: pt.x - screenW / 2,
+            destOffsetDy: pt.y - screenH / 2,
+            headingAtCapture: headingRef.current,
+          });
+        }
+      }).catch(() => {});
+    } else {
+      setPortalConfig(null);
+    }
+  }, [isAligned, screenW, screenH]);
+
   const handleKissPressIn = useCallback(async (emoji: string) => {
     if (isPressingRef.current) return;
     selectedEmojiRef.current = emoji;
@@ -262,31 +289,28 @@ export default function App() {
     kissGrowAnim.stopAnimation();
     setShowGrowingHeart(false);
 
-    // Time elapsed since animation started, capped at 2000ms → 0..1
     const val = Math.min((Date.now() - pressStartTime.current) / 2000, 1);
-    console.log('[kiss] val:', val);
     if (val < 0.025) return;
 
-    // 36px base * scale (0.5..2.0) → 18..72 visual size
     const heartSize = Math.round(36 * (0.5 + val * 1.5));
     const startX = kissOriginRef.current.x;
     const startY = kissOriginRef.current.y;
+    const userX = screenW / 2;
+    const userY = screenH / 2;
+    const headingAtLaunch = headingRef.current; // capture before async gap
 
     let endX = screenW / 2;
     let endY = 100;
     try {
       const pt = await mapRef.current?.pointForCoordinate(TARGET);
       if (pt) { endX = pt.x; endY = pt.y; }
-    } catch (e) {
-      console.log('[kiss] pointForCoordinate error:', e);
-    }
+    } catch {}
 
-    console.log('[kiss] launching heart:', { startX, startY, endX, endY, heartSize });
     setFlyingHearts(prev => {
       if (prev.length >= 5) return prev;
       return [
         ...prev,
-        { id: heartIdRef.current++, startX, startY, endX, endY, size: heartSize, emoji: selectedEmojiRef.current },
+        { id: heartIdRef.current++, startX, startY, endX, endY, userX, userY, headingAtLaunch, size: heartSize, emoji: selectedEmojiRef.current },
       ];
     });
   }, [kissGrowAnim, screenW, screenH]);
@@ -401,6 +425,17 @@ export default function App() {
           </View>
         )}
 
+        {isAligned && portalConfig && (
+          <PortalParticles
+            userX={screenW / 2}
+            userY={screenH / 2}
+            destOffsetDx={portalConfig.destOffsetDx}
+            destOffsetDy={portalConfig.destOffsetDy}
+            headingAtCapture={portalConfig.headingAtCapture}
+            headingRef={headingRef}
+          />
+        )}
+
         {flyingHearts.length > 0 && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             {flyingHearts.map(h => (
@@ -411,6 +446,10 @@ export default function App() {
                 startY={h.startY}
                 endX={h.endX}
                 endY={h.endY}
+                userX={h.userX}
+                userY={h.userY}
+                headingAtLaunch={h.headingAtLaunch}
+                headingRef={headingRef}
                 size={h.size}
                 emoji={h.emoji}
                 onArrive={triggerDestinationPulse}

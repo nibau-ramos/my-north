@@ -87,20 +87,20 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {showLeft && (
         <>
-          <Animated.View style={[styles.edge, { left: EDGE, opacity: opacityMain, transform: [{ translateX: leftTranslate }] }]}>
+          <Animated.View style={[styles.edge, { left: EDGE, marginTop: -H, opacity: opacityMain, transform: [{ translateX: leftTranslate }] }]}>
             <LeftArrow color={color} />
           </Animated.View>
-          <Animated.View style={[styles.edge, { left: EDGE + W + 8, opacity: opacityDim, transform: [{ translateX: leftTranslate }] }]}>
+          <Animated.View style={[styles.edge, { left: EDGE + W + 8, marginTop: -H * 0.7, opacity: opacityDim, transform: [{ translateX: leftTranslate }] }]}>
             <LeftArrow color={color} size={0.7} />
           </Animated.View>
         </>
       )}
       {showRight && (
         <>
-          <Animated.View style={[styles.edge, { right: EDGE, opacity: opacityMain, transform: [{ translateX: rightTranslate }] }]}>
+          <Animated.View style={[styles.edge, { right: EDGE, marginTop: -H, opacity: opacityMain, transform: [{ translateX: rightTranslate }] }]}>
             <RightArrow color={color} />
           </Animated.View>
-          <Animated.View style={[styles.edge, { right: EDGE + W + 8, opacity: opacityDim, transform: [{ translateX: rightTranslate }] }]}>
+          <Animated.View style={[styles.edge, { right: EDGE + W + 8, marginTop: -H * 0.7, opacity: opacityDim, transform: [{ translateX: rightTranslate }] }]}>
             <RightArrow color={color} size={0.7} />
           </Animated.View>
         </>
