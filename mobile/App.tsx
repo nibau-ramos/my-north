@@ -107,7 +107,9 @@ export default function App() {
 
   // Destination pulse overlay (outside MapView — markers can't animate)
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseScreenPos = useRef({ x: 0, y: 0 });
+  const pulseX = useRef(new Animated.Value(0)).current;
+  const pulseY = useRef(new Animated.Value(0)).current;
+  const pulseOffsetRef = useRef({ dx: 0, dy: 0, headingAtCapture: 0 });
   const [showPulse, setShowPulse] = useState(false);
 
   // Portal line fade-in
@@ -316,17 +318,36 @@ export default function App() {
   }, [kissGrowAnim, screenW, screenH]);
 
   const triggerDestinationPulse = useCallback(async () => {
+    const ux = screenW / 2;
+    const uy = screenH / 2;
     try {
       const pt = await mapRef.current?.pointForCoordinate(TARGET);
-      if (pt) pulseScreenPos.current = { x: pt.x, y: pt.y };
+      if (pt) {
+        pulseOffsetRef.current = { dx: pt.x - ux, dy: pt.y - uy, headingAtCapture: headingRef.current };
+        pulseX.setValue(pt.x - 19);
+        pulseY.setValue(pt.y - 19);
+      }
     } catch {}
     pulseAnim.setValue(1);
     setShowPulse(true);
+
+    const trackTimer = setInterval(() => {
+      const { dx, dy, headingAtCapture } = pulseOffsetRef.current;
+      const dH = (headingRef.current - headingAtCapture) * (Math.PI / 180);
+      const cosH = Math.cos(dH);
+      const sinH = Math.sin(dH);
+      pulseX.setValue(ux + dx * cosH + dy * sinH - 19);
+      pulseY.setValue(uy - dx * sinH + dy * cosH - 19);
+    }, 16);
+
     Animated.sequence([
       Animated.timing(pulseAnim, { toValue: 1.35, duration: 160, useNativeDriver: true }),
       Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start(() => setShowPulse(false));
-  }, [pulseAnim]);
+    ]).start(() => {
+      clearInterval(trackTimer);
+      setShowPulse(false);
+    });
+  }, [pulseAnim, pulseX, pulseY, screenW, screenH]);
 
   const removeHeart = useCallback((id: number) => {
     setFlyingHearts(prev => prev.filter(h => h.id !== id));
@@ -402,25 +423,24 @@ export default function App() {
 
         {showPulse && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Animated.View
-              style={{
-                position: 'absolute',
-                left: pulseScreenPos.current.x - 19,
-                top: pulseScreenPos.current.y - 19,
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                backgroundColor: 'white',
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#000',
-                shadowOpacity: 0.35,
-                shadowRadius: 6,
-                shadowOffset: { width: 0, height: 2 },
-                transform: [{ scale: pulseAnim }],
-              }}
-            >
-              <Text style={styles.destinationEmoji}>❤️</Text>
+            <Animated.View style={{ position: 'absolute', left: pulseX, top: pulseY }}>
+              <Animated.View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: 'white',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.35,
+                  shadowRadius: 6,
+                  shadowOffset: { width: 0, height: 2 },
+                  transform: [{ scale: pulseAnim }],
+                }}
+              >
+                <Text style={styles.destinationEmoji}>❤️</Text>
+              </Animated.View>
             </Animated.View>
           </View>
         )}
