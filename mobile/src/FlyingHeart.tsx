@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Text } from 'react-native';
+import MapView from 'react-native-maps';
 
 const FLIGHT_MS = 2400;
 const FRAG_COUNT = 6;
 const TICK_MS = 16;
+const FETCH_INTERVAL_MS = 50; // re-query target screen position at most every 50ms
 
 interface Props {
   id: number;
@@ -11,10 +13,8 @@ interface Props {
   startY: number;
   endX: number;
   endY: number;
-  userX: number;
-  userY: number;
-  headingAtLaunch: number;
-  headingRef: React.MutableRefObject<number>;
+  mapRef: React.RefObject<MapView | null>;
+  target: { latitude: number; longitude: number };
   size: number;
   emoji: string;
   onArrive: () => void;
@@ -22,8 +22,7 @@ interface Props {
 }
 
 export const FlyingHeart = React.memo(function FlyingHeart({
-  id, startX, startY, endX, endY, userX, userY,
-  headingAtLaunch, headingRef, size, emoji, onArrive, onComplete,
+  id, startX, startY, endX, endY, mapRef, target, size, emoji, onArrive, onComplete,
 }: Props) {
   const hs = size * 0.55;
   const posX = useRef(new Animated.Value(startX - hs)).current;
@@ -31,6 +30,11 @@ export const FlyingHeart = React.memo(function FlyingHeart({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [exploding, setExploding] = useState(false);
   const landingPos = useRef({ x: endX, y: endY });
+
+  // Live destination position — updated via pointForCoordinate so zoom/rotation changes are tracked
+  const latestEndRef = useRef({ x: endX, y: endY });
+  const fetchPending = useRef(false);
+  const lastFetchTime = useRef(0);
 
   const pathConfig = useRef({
     isLost: Math.random() < 0.15,
@@ -49,21 +53,25 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     }))
   ).current;
 
-  // Destination offset from user centre at launch — used to track rotation
-  const origOffset = { dx: endX - userX, dy: endY - userY };
-
   useEffect(() => {
     const startTime = Date.now();
 
     const timer = setInterval(() => {
       const t = Math.min((Date.now() - startTime) / FLIGHT_MS, 1);
 
-      // Rotate original offset by heading delta to get current destination on screen
-      const dH = (headingRef.current - headingAtLaunch) * (Math.PI / 180);
-      const cosH = Math.cos(dH);
-      const sinH = Math.sin(dH);
-      const currEndX = userX + origOffset.dx * cosH + origOffset.dy * sinH;
-      const currEndY = userY - origOffset.dx * sinH + origOffset.dy * cosH;
+      // Throttled live position query — handles both rotation and zoom changes
+      const now = Date.now();
+      if (!fetchPending.current && mapRef.current && now - lastFetchTime.current >= FETCH_INTERVAL_MS) {
+        fetchPending.current = true;
+        lastFetchTime.current = now;
+        mapRef.current.pointForCoordinate(target)
+          .then(pt => { latestEndRef.current = { x: pt.x, y: pt.y }; })
+          .catch(() => {})
+          .finally(() => { fetchPending.current = false; });
+      }
+
+      const currEndX = latestEndRef.current.x;
+      const currEndY = latestEndRef.current.y;
 
       const dx = currEndX - startX;
       const dy = currEndY - startY;

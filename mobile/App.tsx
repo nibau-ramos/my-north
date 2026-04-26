@@ -72,9 +72,6 @@ interface HeartEntry {
   startY: number;
   endX: number;
   endY: number;
-  userX: number;
-  userY: number;
-  headingAtLaunch: number;
   size: number;
   emoji: string;
 }
@@ -102,9 +99,10 @@ export default function App() {
   const [angleDiff, setAngleDiff] = useState(0);
   const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Destination marker pulse — scale animation driven inside the Marker so position tracks the SDK
+  // Destination pulse overlay — position captured once at arrival, scale via native driver
   const pulseScaleAnim = useRef(new Animated.Value(1)).current;
-  const [pulseActive, setPulseActive] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
+  const [pulsePos, setPulsePos] = useState<{ x: number; y: number } | null>(null);
 
   // Portal line fade-in
   const lineAnim = useRef(new Animated.Value(0)).current;
@@ -288,9 +286,6 @@ export default function App() {
     const heartSize = Math.round(36 * (0.5 + val * 1.5));
     const startX = kissOriginRef.current.x;
     const startY = kissOriginRef.current.y;
-    const userX = screenW / 2;
-    const userY = dotY;
-    const headingAtLaunch = headingRef.current; // capture before async gap
 
     let endX = screenW / 2;
     let endY = 100;
@@ -303,18 +298,23 @@ export default function App() {
       if (prev.length >= 5) return prev;
       return [
         ...prev,
-        { id: heartIdRef.current++, startX, startY, endX, endY, userX, userY, headingAtLaunch, size: heartSize, emoji: selectedEmojiRef.current },
+        { id: heartIdRef.current++, startX, startY, endX, endY, size: heartSize, emoji: selectedEmojiRef.current },
       ];
     });
   }, [kissGrowAnim, screenW, screenH]);
 
-  const triggerDestinationPulse = useCallback(() => {
-    setPulseActive(true);
+  const triggerDestinationPulse = useCallback(async () => {
+    try {
+      const pt = await mapRef.current?.pointForCoordinate(TARGET);
+      if (!pt) return;
+      setPulsePos({ x: pt.x - 19, y: pt.y - 19 });
+    } catch { return; }
     pulseScaleAnim.setValue(1);
+    setShowPulse(true);
     Animated.sequence([
-      Animated.timing(pulseScaleAnim, { toValue: 1.35, duration: 160, useNativeDriver: false }),
-      Animated.timing(pulseScaleAnim, { toValue: 1, duration: 200, useNativeDriver: false }),
-    ]).start(() => setPulseActive(false));
+      Animated.timing(pulseScaleAnim, { toValue: 1.35, duration: 160, useNativeDriver: true }),
+      Animated.timing(pulseScaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start(() => setShowPulse(false));
   }, [pulseScaleAnim]);
 
   const removeHeart = useCallback((id: number) => {
@@ -378,17 +378,27 @@ export default function App() {
               />
             </>
           )}
-          {showIndicator && (
-            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={pulseActive}>
-              <Animated.View style={[styles.destinationMarker, { transform: [{ scale: pulseScaleAnim }] }]}>
+          {showIndicator && !showPulse && (
+            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={styles.destinationMarker}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
-              </Animated.View>
+              </View>
             </Marker>
           )}
         </MapView>
         )}
 
         {showIndicator && <CompassIndicator angleDiff={angleDiff} dotOffsetY={mapTopPad / 2} />}
+
+        {showPulse && pulsePos && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <View style={{ position: 'absolute', left: pulsePos.x, top: pulsePos.y }}>
+              <Animated.View style={[styles.destinationMarker, { transform: [{ scale: pulseScaleAnim }] }]}>
+                <Text style={styles.destinationEmoji}>❤️</Text>
+              </Animated.View>
+            </View>
+          </View>
+        )}
 
         {flyingHearts.length > 0 && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -400,10 +410,8 @@ export default function App() {
                 startY={h.startY}
                 endX={h.endX}
                 endY={h.endY}
-                userX={h.userX}
-                userY={h.userY}
-                headingAtLaunch={h.headingAtLaunch}
-                headingRef={headingRef}
+                mapRef={mapRef}
+                target={TARGET}
                 size={h.size}
                 emoji={h.emoji}
                 onArrive={triggerDestinationPulse}
