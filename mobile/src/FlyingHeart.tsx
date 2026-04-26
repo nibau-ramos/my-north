@@ -108,9 +108,9 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     <Animated.View
       style={{
         position: 'absolute',
-        left: 0,
-        top: 0,
-        transform: [{ translateX: tx }, { translateY: ty }, { scale: sc }],
+        left: tx,
+        top: ty,
+        transform: [{ scale: sc }],
       }}
     >
       <Text style={{ fontSize: size }}>❤️</Text>
