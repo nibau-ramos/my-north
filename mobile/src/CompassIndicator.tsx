@@ -1,103 +1,105 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-const R = 28;          // arc radius
-const B = 3;           // arc border width
-const AW = 7;          // arrowhead size
-const SWING_DEG = 30;  // how far the arc sweeps each repeat
-const SWING_MS = 520;  // forward sweep duration
-const HOLD_MS = 440;   // pause at rest before next sweep
+const ORBIT_R = 50;   // px from blue dot centre to satellite centre
+const DOT_R = 5;      // satellite radius
+const LUNGE_Y = 16;   // downward lunge (traces the orbit arc, suggesting rotation direction)
+const LUNGE_X = 6;    // outward nudge per side (reinforces direction)
+const REST_MS = 650;
+const OUT_MS = 210;
+const BACK_MS = 420;
 
-function indicatorColor(diff: number): string {
+function dotColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
-  const r = Math.round(255 * (1 - t));
-  const g = Math.round(82 + 148 * t);
-  const b = Math.round(82 + 36 * t);
+  const r = Math.round(255 * (1 - t * 0.7));
+  const g = Math.round(80 + 140 * t);
+  const b = Math.round(80 + 40 * t);
   return `rgb(${r},${g},${b})`;
 }
 
-export function CompassIndicator({ angleDiff, dotOffsetY = 0 }: { angleDiff: number; dotOffsetY?: number }) {
+export function CompassIndicator({
+  angleDiff,
+  dotOffsetY = 0,
+}: {
+  angleDiff: number;
+  dotOffsetY?: number;
+}) {
   const THRESHOLD = 10;
   const showLeft = angleDiff < -THRESHOLD;
   const showRight = angleDiff > THRESHOLD;
   const show = showLeft || showRight;
-  const isCW = showRight;
-  const color = indicatorColor(angleDiff);
 
-  const swingAnim = useRef(new Animated.Value(0)).current;
+  const lungeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!show) return;
-    swingAnim.setValue(0);
+    if (!show) {
+      lungeAnim.setValue(0);
+      return;
+    }
     const anim = Animated.loop(
       Animated.sequence([
-        // Hold at rest
-        Animated.timing(swingAnim, { toValue: 0, duration: HOLD_MS, useNativeDriver: true }),
-        // Sweep forward
-        Animated.timing(swingAnim, { toValue: 1, duration: SWING_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        // Snap back instantly
-        Animated.timing(swingAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ])
+        Animated.delay(REST_MS),
+        Animated.timing(lungeAnim, {
+          toValue: 1,
+          duration: OUT_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(lungeAnim, {
+          toValue: 0,
+          duration: BACK_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
     );
     anim.start();
     return () => anim.stop();
-  }, [show, swingAnim]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [show, lungeAnim]);
 
   if (!show) return null;
 
-  const rotation = swingAnim.interpolate({
+  const dir = showRight ? 1 : -1;
+  const color = dotColor(angleDiff);
+
+  // Lunge traces a short arc: outward + downward, suggesting orbital direction
+  const translateX = lungeAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', `${SWING_DEG}deg`],
+    outputRange: [0, dir * LUNGE_X],
+  });
+  const translateY = lungeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, LUNGE_Y],
+  });
+  const scale = lungeAnim.interpolate({
+    inputRange: [0, 0.4, 1],
+    outputRange: [1, 1.35, 1],
   });
 
-  // scaleX: -1 mirrors the arc for CCW — a CW sweep in mirrored space appears CCW
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={[styles.center, dotOffsetY ? { transform: [{ translateY: dotOffsetY }] } : undefined]}>
+      <View
+        style={[
+          styles.center,
+          dotOffsetY ? { transform: [{ translateY: dotOffsetY }] } : undefined,
+        ]}
+      >
         <Animated.View
           style={{
-            transform: [
-              { scaleX: isCW ? 1 : -1 },
-              { rotate: rotation },
-            ],
+            position: 'absolute',
+            left: dir * ORBIT_R - DOT_R,
+            top: -DOT_R,
+            width: DOT_R * 2,
+            height: DOT_R * 2,
+            borderRadius: DOT_R,
+            backgroundColor: color,
+            shadowColor: color,
+            shadowOpacity: 0.75,
+            shadowRadius: 7,
+            shadowOffset: { width: 0, height: 0 },
+            transform: [{ translateX }, { translateY }, { scale }],
           }}
-        >
-          {/* Bottom semicircle: overflow:hidden clips the top half of the ring */}
-          <View style={{ position: 'absolute', top: 0, left: -R, width: R * 2, height: R, overflow: 'hidden' }}>
-            <View
-              style={{
-                position: 'absolute',
-                top: -R,
-                left: 0,
-                width: R * 2,
-                height: R * 2,
-                borderRadius: R,
-                borderWidth: B,
-                borderTopColor: 'transparent',
-                borderRightColor: color,
-                borderBottomColor: color,
-                borderLeftColor: color,
-              }}
-            />
-          </View>
-
-          {/* Arrowhead at left end (9 o'clock), pointing up — tangent direction for CW sweep */}
-          <View
-            style={{
-              position: 'absolute',
-              top: -AW,
-              left: -R - AW / 2,
-              width: 0,
-              height: 0,
-              borderBottomWidth: AW,
-              borderLeftWidth: AW / 2,
-              borderRightWidth: AW / 2,
-              borderBottomColor: color,
-              borderLeftColor: 'transparent',
-              borderRightColor: 'transparent',
-            }}
-          />
-        </Animated.View>
+        />
       </View>
     </View>
   );
