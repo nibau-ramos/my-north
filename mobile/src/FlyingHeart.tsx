@@ -31,10 +31,13 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     }))
   ).current;
 
-  const isLost = Math.random() < 0.15;
-  const path = useRef({
-    amplitude: isLost ? 160 + Math.random() * 80 : 20 + Math.random() * 40,
-    oscillations: isLost ? 3 + Math.random() * 2 : 1 + Math.random() * 1.5,
+  const pathConfig = useRef({
+    isLost: Math.random() < 0.15,
+    amplitude: 20 + Math.random() * 40,
+    oscillations: 1 + Math.random() * 1.5,
+    dir: Math.random() < 0.5 ? 1 : -1,
+    perpDir: Math.random() < 0.5 ? 1 : -1,
+    wanderDist: 120 + Math.random() * 100,
   }).current;
 
   const N = 60;
@@ -46,14 +49,28 @@ export const FlyingHeart = React.memo(function FlyingHeart({
   const py = dx / len;
   const hs = size * 0.55;
 
-  // envelope 4t(1-t) forces osc=0 at t=0 and t=1 so every heart
-  // starts exactly at the blue dot and lands exactly on the destination
+  // Bezier control points for the lost-heart path:
+  // P1 goes backward + sideways (wrong direction), P2 approaches from the side
+  const lostWander = Math.max(pathConfig.wanderDist, len * 0.35);
+  const P1x = startX - dx * 0.35 + px * pathConfig.perpDir * lostWander;
+  const P1y = startY - dy * 0.35 + py * pathConfig.perpDir * lostWander;
+  const P2x = endX + px * pathConfig.perpDir * lostWander * 0.2;
+  const P2y = endY + py * pathConfig.perpDir * lostWander * 0.2;
+
   const xOut = ir.map(t => {
-    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations) * 4 * t * (1 - t);
+    if (pathConfig.isLost) {
+      const mt = 1 - t;
+      return mt ** 3 * startX + 3 * mt ** 2 * t * P1x + 3 * mt * t ** 2 * P2x + t ** 3 * endX - hs;
+    }
+    const osc = pathConfig.dir * pathConfig.amplitude * Math.sin(t * Math.PI * 2 * pathConfig.oscillations) * 4 * t * (1 - t);
     return startX + t * dx + px * osc - hs;
   });
   const yOut = ir.map(t => {
-    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations) * 4 * t * (1 - t);
+    if (pathConfig.isLost) {
+      const mt = 1 - t;
+      return mt ** 3 * startY + 3 * mt ** 2 * t * P1y + 3 * mt * t ** 2 * P2y + t ** 3 * endY - hs;
+    }
+    const osc = pathConfig.dir * pathConfig.amplitude * Math.sin(t * Math.PI * 2 * pathConfig.oscillations) * 4 * t * (1 - t);
     return startY + t * dy + py * osc - hs;
   });
   const scOut = ir.map(t => 1 - 0.4 * t);
