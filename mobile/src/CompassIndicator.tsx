@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-const R = 45;
-const B = 3.5;
-const CAP_R = B + 1.5;
-const SPIN_MS = 1100;
+const R = 40;          // arc radius
+const B = 4;           // arc border width
+const AW = 8;          // arrowhead size
+const SWING_DEG = 30;  // how far the arc sweeps each repeat
+const SWING_MS = 520;  // forward sweep duration
+const HOLD_MS = 440;   // pause at rest before next sweep
 
 function indicatorColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
@@ -22,67 +24,77 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
   const isCW = showRight;
   const color = indicatorColor(angleDiff);
 
-  const spinAnim = useRef(new Animated.Value(0)).current;
+  const swingAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!show) return;
-    spinAnim.setValue(0);
+    swingAnim.setValue(0);
     const anim = Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1,
-        duration: SPIN_MS,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
+      Animated.sequence([
+        // Hold at rest
+        Animated.timing(swingAnim, { toValue: 0, duration: HOLD_MS, useNativeDriver: true }),
+        // Sweep forward
+        Animated.timing(swingAnim, { toValue: 1, duration: SWING_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        // Snap back instantly
+        Animated.timing(swingAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
     );
     anim.start();
     return () => anim.stop();
-  }, [show, spinAnim]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [show, swingAnim]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!show) return null;
 
-  const rotate = spinAnim.interpolate({
+  const rotation = swingAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ['0deg', `${SWING_DEG}deg`],
   });
 
-  // scaleX: -1 mirrors the ring for CCW so the cap (at 3 o'clock) becomes the leading edge
-  // in both directions — no need to restart the animation when direction flips
+  // scaleX: -1 mirrors the arc for CCW — a CW sweep in mirrored space appears CCW
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <View style={styles.center}>
-        <Animated.View style={{ transform: [{ scaleX: isCW ? 1 : -1 }, { rotate }] }}>
-          {/* 270° arc — gap at bottom (borderBottomColor transparent) */}
-          <View
-            style={{
-              width: R * 2,
-              height: R * 2,
-              borderRadius: R,
-              borderWidth: B,
-              borderTopColor: color,
-              borderRightColor: color,
-              borderLeftColor: color,
-              borderBottomColor: 'transparent',
-              shadowColor: color,
-              shadowOpacity: 0.65,
-              shadowRadius: 7,
-              shadowOffset: { width: 0, height: 0 },
-            }}
-          />
-          {/* Leading-edge cap at 3 o'clock */}
+        <Animated.View
+          style={{
+            transform: [
+              { scaleX: isCW ? 1 : -1 },
+              { rotate: rotation },
+            ],
+          }}
+        >
+          {/* Bottom semicircle: overflow:hidden clips the top half of the ring */}
+          <View style={{ position: 'absolute', top: 0, left: -R, width: R * 2, height: R, overflow: 'hidden' }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: -R,
+                left: 0,
+                width: R * 2,
+                height: R * 2,
+                borderRadius: R,
+                borderWidth: B,
+                borderTopColor: 'transparent',
+                borderRightColor: color,
+                borderBottomColor: color,
+                borderLeftColor: color,
+              }}
+            />
+          </View>
+
+          {/* Arrowhead at the right end of the arc (3 o'clock = right side at center level) */}
           <View
             style={{
               position: 'absolute',
-              right: -(CAP_R - B / 2),
-              top: R - CAP_R,
-              width: CAP_R * 2,
-              height: CAP_R * 2,
-              borderRadius: CAP_R,
-              backgroundColor: color,
-              shadowColor: color,
-              shadowOpacity: 0.9,
-              shadowRadius: 5,
-              shadowOffset: { width: 0, height: 0 },
+              top: -AW / 2,
+              left: R - AW / 2,
+              width: 0,
+              height: 0,
+              borderTopWidth: AW / 2,
+              borderBottomWidth: AW / 2,
+              borderLeftWidth: AW,
+              borderTopColor: 'transparent',
+              borderBottomColor: 'transparent',
+              borderLeftColor: color,
             }}
           />
         </Animated.View>
