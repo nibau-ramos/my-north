@@ -325,7 +325,7 @@ export default function App() {
               style={{
                 position: 'absolute',
                 left: screenW / 2 - 18,
-                top: screenH / 2 - 68,
+                top: screenH / 2 - 18,
                 fontSize: 36,
                 transform: [{ scale: kissScale }],
               }}
