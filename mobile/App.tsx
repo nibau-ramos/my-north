@@ -142,10 +142,8 @@ export default function App() {
           const km = haversineKm(userLocation.current, TARGET);
           const targetZoom = zoomForDistance(km);
           const startZoom = currentZoom.current;
-          const startLat = userLocation.current.latitude;
-          const startLng = userLocation.current.longitude;
-          const midLat = (startLat + TARGET.latitude) / 2;
-          const midLng = (startLng + TARGET.longitude) / 2;
+          const userLat = userLocation.current.latitude;
+          const userLng = userLocation.current.longitude;
 
           const TOTAL_MS = 4000;
           const STEP_MS = 100;
@@ -153,14 +151,11 @@ export default function App() {
 
           const timer = setInterval(() => {
             const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
-            const e = easeInOut(t);
-            const zoom = startZoom + (targetZoom - startZoom) * e;
-            const centerLat = startLat + (midLat - startLat) * e;
-            const centerLng = startLng + (midLng - startLng) * e;
+            const zoom = startZoom + (targetZoom - startZoom) * easeInOut(t);
 
             currentZoom.current = zoom;
             mapRef.current?.animateCamera(
-              { center: { latitude: centerLat, longitude: centerLng }, zoom, heading: headingRef.current },
+              { center: { latitude: userLat, longitude: userLng }, zoom, heading: headingRef.current },
               { duration: STEP_MS * 2 },
             );
 
