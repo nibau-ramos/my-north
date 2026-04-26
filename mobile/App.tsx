@@ -102,12 +102,9 @@ export default function App() {
   const [angleDiff, setAngleDiff] = useState(0);
   const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Destination pulse overlay (outside MapView — markers can't animate)
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseX = useRef(new Animated.Value(0)).current;
-  const pulseY = useRef(new Animated.Value(0)).current;
-  const pulseOffsetRef = useRef({ dx: 0, dy: 0, headingAtCapture: 0 });
-  const [showPulse, setShowPulse] = useState(false);
+  // Destination marker pulse — scale animation driven inside the Marker so position tracks the SDK
+  const pulseScaleAnim = useRef(new Animated.Value(1)).current;
+  const [pulseActive, setPulseActive] = useState(false);
 
   // Portal line fade-in
   const lineAnim = useRef(new Animated.Value(0)).current;
@@ -311,37 +308,14 @@ export default function App() {
     });
   }, [kissGrowAnim, screenW, screenH]);
 
-  const triggerDestinationPulse = useCallback(async () => {
-    const ux = screenW / 2;
-    const uy = screenH / 2;
-    try {
-      const pt = await mapRef.current?.pointForCoordinate(TARGET);
-      if (pt) {
-        pulseOffsetRef.current = { dx: pt.x - ux, dy: pt.y - uy, headingAtCapture: headingRef.current };
-        pulseX.setValue(pt.x - 19);
-        pulseY.setValue(pt.y - 19);
-      }
-    } catch {}
-    pulseAnim.setValue(1);
-    setShowPulse(true);
-
-    const trackTimer = setInterval(() => {
-      const { dx, dy, headingAtCapture } = pulseOffsetRef.current;
-      const dH = (headingRef.current - headingAtCapture) * (Math.PI / 180);
-      const cosH = Math.cos(dH);
-      const sinH = Math.sin(dH);
-      pulseX.setValue(ux + dx * cosH + dy * sinH - 19);
-      pulseY.setValue(uy - dx * sinH + dy * cosH - 19);
-    }, 16);
-
+  const triggerDestinationPulse = useCallback(() => {
+    setPulseActive(true);
+    pulseScaleAnim.setValue(1);
     Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.35, duration: 160, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      clearInterval(trackTimer);
-      setShowPulse(false);
-    });
-  }, [pulseAnim, pulseX, pulseY, screenW, screenH]);
+      Animated.timing(pulseScaleAnim, { toValue: 1.35, duration: 160, useNativeDriver: false }),
+      Animated.timing(pulseScaleAnim, { toValue: 1, duration: 200, useNativeDriver: false }),
+    ]).start(() => setPulseActive(false));
+  }, [pulseScaleAnim]);
 
   const removeHeart = useCallback((id: number) => {
     setFlyingHearts(prev => prev.filter(h => h.id !== id));
@@ -404,41 +378,17 @@ export default function App() {
               />
             </>
           )}
-          {showIndicator && !showPulse && (
-            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.destinationMarker}>
+          {showIndicator && (
+            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={pulseActive}>
+              <Animated.View style={[styles.destinationMarker, { transform: [{ scale: pulseScaleAnim }] }]}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
-              </View>
+              </Animated.View>
             </Marker>
           )}
         </MapView>
         )}
 
         {showIndicator && <CompassIndicator angleDiff={angleDiff} dotOffsetY={mapTopPad / 2} />}
-
-        {showPulse && (
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Animated.View style={{ position: 'absolute', left: pulseX, top: pulseY }}>
-              <Animated.View
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
-                  backgroundColor: 'white',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: '#000',
-                  shadowOpacity: 0.35,
-                  shadowRadius: 6,
-                  shadowOffset: { width: 0, height: 2 },
-                  transform: [{ scale: pulseAnim }],
-                }}
-              >
-                <Text style={styles.destinationEmoji}>❤️</Text>
-              </Animated.View>
-            </Animated.View>
-          </View>
-        )}
 
         {flyingHearts.length > 0 && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
