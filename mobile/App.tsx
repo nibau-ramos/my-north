@@ -20,7 +20,7 @@ const TARGET = {
 
 const ALIGNED_THRESHOLD = 10;
 
-const KISS_EMOJIS = ['❤️', '😘', '😍', '😉'];
+const KISS_EMOJIS = ['❤️', '😘', '😍', '😏'];
 
 function getBearing(
   from: { latitude: number; longitude: number },
