@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-const R = 40;          // arc radius
-const B = 4;           // arc border width
-const AW = 8;          // arrowhead size
+const R = 28;          // arc radius
+const B = 3;           // arc border width
+const AW = 7;          // arrowhead size
 const SWING_DEG = 30;  // how far the arc sweeps each repeat
 const SWING_MS = 520;  // forward sweep duration
 const HOLD_MS = 440;   // pause at rest before next sweep
@@ -81,20 +81,20 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
             />
           </View>
 
-          {/* Arrowhead at the right end of the arc (3 o'clock = right side at center level) */}
+          {/* Arrowhead at left end (9 o'clock), pointing up — tangent direction for CW sweep */}
           <View
             style={{
               position: 'absolute',
-              top: -AW / 2,
-              left: R - AW / 2,
+              top: -AW,
+              left: -R - AW / 2,
               width: 0,
               height: 0,
-              borderTopWidth: AW / 2,
-              borderBottomWidth: AW / 2,
-              borderLeftWidth: AW,
-              borderTopColor: 'transparent',
-              borderBottomColor: 'transparent',
-              borderLeftColor: color,
+              borderBottomWidth: AW,
+              borderLeftWidth: AW / 2,
+              borderRightWidth: AW / 2,
+              borderBottomColor: color,
+              borderLeftColor: 'transparent',
+              borderRightColor: 'transparent',
             }}
           />
         </Animated.View>
