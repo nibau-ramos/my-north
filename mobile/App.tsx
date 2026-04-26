@@ -104,6 +104,7 @@ export default function App() {
   const kissGrowAnim = useRef(new Animated.Value(0)).current;
   const kissValRef = useRef(0);
   const isPressingRef = useRef(false);
+  const kissAnimatingRef = useRef(false);
   const kissOriginRef = useRef({ x: 0, y: 0 });
   const heartIdRef = useRef(0);
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
@@ -229,6 +230,7 @@ export default function App() {
     if (!isPressingRef.current) return; // released during the async lookup
 
     setShowGrowingHeart(true);
+    kissAnimatingRef.current = true;
     Animated.timing(kissGrowAnim, {
       toValue: 1,
       duration: 2000,
@@ -237,12 +239,14 @@ export default function App() {
   }, [kissGrowAnim, screenW, screenH]);
 
   const handleKissPressOut = useCallback(async () => {
+    kissAnimatingRef.current = false;
     if (!isPressingRef.current) return;
     isPressingRef.current = false;
     kissGrowAnim.stopAnimation();
     setShowGrowingHeart(false);
 
     const val = kissValRef.current;
+    console.log('[kiss] val:', val);
     if (val < 0.05) return;
 
     // 36px base * scale (0.5..2.0) → 18..72 visual size
@@ -255,8 +259,11 @@ export default function App() {
     try {
       const pt = await mapRef.current?.pointForCoordinate(TARGET);
       if (pt) { endX = pt.x; endY = pt.y; }
-    } catch {}
+    } catch (e) {
+      console.log('[kiss] pointForCoordinate error:', e);
+    }
 
+    console.log('[kiss] launching heart:', { startX, startY, endX, endY, heartSize });
     setFlyingHearts(prev => {
       if (prev.length >= 5) return prev;
       return [
@@ -272,7 +279,7 @@ export default function App() {
 
   // Fire kiss immediately when orientation is lost mid-press
   useEffect(() => {
-    if (!isAligned && isPressingRef.current) {
+    if (!isAligned && kissAnimatingRef.current) {
       handleKissPressOut();
     }
   }, [isAligned]);
