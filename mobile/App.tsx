@@ -99,10 +99,11 @@ export default function App() {
   const [angleDiff, setAngleDiff] = useState(0);
   const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Destination pulse overlay — position captured once at arrival, scale via native driver
+  // Destination pulse overlay — position tracked live via pointForCoordinate, scale via native driver
   const pulseScaleAnim = useRef(new Animated.Value(1)).current;
+  const pulseX = useRef(new Animated.Value(0)).current;
+  const pulseY = useRef(new Animated.Value(0)).current;
   const [showPulse, setShowPulse] = useState(false);
-  const [pulsePos, setPulsePos] = useState<{ x: number; y: number } | null>(null);
 
   // Portal line fade-in
   const lineAnim = useRef(new Animated.Value(0)).current;
@@ -307,15 +308,34 @@ export default function App() {
     try {
       const pt = await mapRef.current?.pointForCoordinate(TARGET);
       if (!pt) return;
-      setPulsePos({ x: pt.x - 19, y: pt.y - 19 });
+      pulseX.setValue(pt.x - 19);
+      pulseY.setValue(pt.y - 19);
     } catch { return; }
+
     pulseScaleAnim.setValue(1);
     setShowPulse(true);
+
+    // Track position every frame so zoom/pan during the animation keeps icon pinned
+    let fetchPending = false;
+    const trackTimer = setInterval(async () => {
+      if (fetchPending || !mapRef.current) return;
+      fetchPending = true;
+      try {
+        const pt = await mapRef.current.pointForCoordinate(TARGET);
+        pulseX.setValue(pt.x - 19);
+        pulseY.setValue(pt.y - 19);
+      } catch {}
+      fetchPending = false;
+    }, 16);
+
     Animated.sequence([
       Animated.timing(pulseScaleAnim, { toValue: 1.35, duration: 160, useNativeDriver: true }),
       Animated.timing(pulseScaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start(() => setShowPulse(false));
-  }, [pulseScaleAnim]);
+    ]).start(() => {
+      clearInterval(trackTimer);
+      setShowPulse(false);
+    });
+  }, [pulseScaleAnim, pulseX, pulseY]);
 
   const removeHeart = useCallback((id: number) => {
     setFlyingHearts(prev => prev.filter(h => h.id !== id));
@@ -390,13 +410,13 @@ export default function App() {
 
         {showIndicator && <CompassIndicator angleDiff={angleDiff} dotOffsetY={mapTopPad / 2} />}
 
-        {showPulse && pulsePos && (
+        {showPulse && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <View style={{ position: 'absolute', left: pulsePos.x, top: pulsePos.y }}>
+            <Animated.View style={{ position: 'absolute', left: pulseX, top: pulseY }}>
               <Animated.View style={[styles.destinationMarker, { transform: [{ scale: pulseScaleAnim }] }]}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
               </Animated.View>
-            </View>
+            </Animated.View>
           </View>
         )}
 
