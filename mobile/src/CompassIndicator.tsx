@@ -1,20 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-// Tension-line: a chain of dots that pulses outward like a plucked string
+// Rotation-line: dots positioned outward from the blue dot; each one scrolls
+// downward (along the orbital arc) as it appears, suggesting rotation direction.
+// Both sides scroll downward: CW from 3h goes toward 6h, CCW from 9h also toward 6h.
 const N = 7;
-const DOT_R_MAX = 3.5;  // inner dot radius (tapers outward)
+const DOT_R_MAX = 3.5;
 const DOT_R_STEP = 0.35;
-const LINE_START = 22;  // px from blue-dot centre to first dot
-const DOT_GAP = 12;     // px between dot centres
+const LINE_START = 22;   // px from blue-dot centre to first dot
+const DOT_GAP = 12;      // px between dot centres
+
+const SCROLL_Y = 18;     // px each dot travels downward during its flash
 
 const STAGGER_MS = 75;
-const ON_MS = 200;
-const OFF_MS = 185;
-const PAUSE_MS = 500;
-// Loop duration — every dot's private loop must share this total so phase stays locked
+const ON_MS = 200;       // appear + scroll to midpoint
+const OFF_MS = 200;      // fade + continue scrolling
+const PAUSE_MS = 460;
+// Every dot's private loop shares LOOP_MS so stagger phase is preserved across iterations
 const LOOP_MS = N * STAGGER_MS + ON_MS + OFF_MS + PAUSE_MS;
-const REST_MS = LOOP_MS - ON_MS - OFF_MS;  // silence period inside each dot's loop
+const REST_MS = LOOP_MS - ON_MS - OFF_MS;
 
 function lineColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
@@ -36,6 +40,7 @@ export function CompassIndicator({
   const showRight = angleDiff > THRESHOLD;
   const show = showLeft || showRight;
 
+  // Each dot uses a single value that travels 0 → 1 (rise) → 2 (fade) → snap back to 0 → rest
   const dotAnims = useRef(
     Array.from({ length: N }, () => new Animated.Value(0)),
   ).current;
@@ -51,28 +56,27 @@ export function CompassIndicator({
 
     dotAnims.forEach((a, i) => {
       a.setValue(0);
-      // Stagger the loop start so the wave phase is preserved across iterations
       const t = setTimeout(() => {
         const loop = Animated.loop(
           Animated.sequence([
+            // Appear and scroll to arc midpoint
             Animated.timing(a, {
               toValue: 1,
               duration: ON_MS,
-              easing: Easing.out(Easing.sin),
+              easing: Easing.out(Easing.quad),
               useNativeDriver: false,
             }),
+            // Fade and continue along arc
             Animated.timing(a, {
-              toValue: 0,
+              toValue: 2,
               duration: OFF_MS,
-              easing: Easing.in(Easing.sin),
+              easing: Easing.in(Easing.quad),
               useNativeDriver: false,
             }),
-            // Silent rest — fills the gap until the next wave front arrives
-            Animated.timing(a, {
-              toValue: 0,
-              duration: REST_MS,
-              useNativeDriver: false,
-            }),
+            // Snap back to origin while invisible (opacity = 0 at value 0 and 2)
+            Animated.timing(a, { toValue: 0, duration: 0, useNativeDriver: false }),
+            // Silent rest until next wave
+            Animated.timing(a, { toValue: 0, duration: REST_MS, useNativeDriver: false }),
           ]),
         );
         loop.start();
@@ -101,53 +105,44 @@ export function CompassIndicator({
           dotOffsetY ? { transform: [{ translateY: dotOffsetY }] } : undefined,
         ]}
       >
-        {/* Zero-size anchor at blue-dot centre; absolute children use it as origin */}
         <View>
           {dotAnims.map((a, i) => {
             const r = DOT_R_MAX - i * DOT_R_STEP;
             const peakOpacity = 0.9 - i * 0.06;
+
+            // value 0→1: appear + scroll first half; 1→2: fade + scroll second half
             const opacity = a.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.15, peakOpacity],
+              inputRange: [0, 1, 2],
+              outputRange: [0, peakOpacity, 0],
+            });
+            const translateY = a.interpolate({
+              inputRange: [0, 1, 2],
+              outputRange: [0, SCROLL_Y / 2, SCROLL_Y],
             });
             const scale = a.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.55, 1.0],
+              inputRange: [0, 0.5, 1, 1.5, 2],
+              outputRange: [0.4, 0.85, 1.0, 0.85, 0.4],
             });
-            const glowOpacity = a.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0, peakOpacity * 0.6, 0],
-            });
+
             return (
-              <React.Fragment key={i}>
-                {/* Glow halo */}
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    left: dir * (LINE_START + i * DOT_GAP) - r * 2.2,
-                    top: -r * 2.2,
-                    width: r * 4.4,
-                    height: r * 4.4,
-                    borderRadius: r * 2.2,
-                    backgroundColor: color,
-                    opacity: glowOpacity,
-                  }}
-                />
-                {/* Core dot */}
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    left: dir * (LINE_START + i * DOT_GAP) - r,
-                    top: -r,
-                    width: r * 2,
-                    height: r * 2,
-                    borderRadius: r,
-                    backgroundColor: color,
-                    opacity,
-                    transform: [{ scale }],
-                  }}
-                />
-              </React.Fragment>
+              <Animated.View
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: dir * (LINE_START + i * DOT_GAP) - r,
+                  top: -r,
+                  width: r * 2,
+                  height: r * 2,
+                  borderRadius: r,
+                  backgroundColor: color,
+                  opacity,
+                  transform: [{ translateY }, { scale }],
+                  shadowColor: color,
+                  shadowOpacity: 0.7,
+                  shadowRadius: 5,
+                  shadowOffset: { width: 0, height: 0 },
+                }}
+              />
             );
           })}
         </View>
