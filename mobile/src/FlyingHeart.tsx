@@ -31,11 +31,10 @@ export const FlyingHeart = React.memo(function FlyingHeart({
     }))
   ).current;
 
+  const isLost = Math.random() < 0.15;
   const path = useRef({
-    amplitude: 25 + Math.random() * 50,        // 25..75 px
-    oscillations: 1.5 + Math.random() * 2,     // 1.5..3.5 cycles
-    phase: Math.random() * Math.PI * 2,        // random start angle
-    bias: (Math.random() - 0.5) * 40,          // -20..20 px lateral drift
+    amplitude: isLost ? 160 + Math.random() * 80 : 20 + Math.random() * 40,
+    oscillations: isLost ? 3 + Math.random() * 2 : 1 + Math.random() * 1.5,
   }).current;
 
   const N = 60;
@@ -47,15 +46,15 @@ export const FlyingHeart = React.memo(function FlyingHeart({
   const py = dx / len;
   const hs = size * 0.55;
 
+  // envelope 4t(1-t) forces osc=0 at t=0 and t=1 so every heart
+  // starts exactly at the blue dot and lands exactly on the destination
   const xOut = ir.map(t => {
-    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations + path.phase) * (1 - t);
-    const drift = path.bias * (1 - t);
-    return startX + t * dx + px * (osc + drift) - hs;
+    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations) * 4 * t * (1 - t);
+    return startX + t * dx + px * osc - hs;
   });
   const yOut = ir.map(t => {
-    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations + path.phase) * (1 - t);
-    const drift = path.bias * (1 - t);
-    return startY + t * dy + py * (osc + drift) - hs;
+    const osc = path.amplitude * Math.sin(t * Math.PI * 2 * path.oscillations) * 4 * t * (1 - t);
+    return startY + t * dy + py * osc - hs;
   });
   const scOut = ir.map(t => 1 - 0.4 * t);
 
