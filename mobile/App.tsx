@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Polyline, Marker } from 'react-native-maps';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import CompassHeading from 'react-native-compass-heading';
 import { CompassIndicator } from './src/CompassIndicator';
@@ -91,6 +91,8 @@ export default function App() {
   const mapRef = useRef<MapView>(null);
   const zoomDone = useRef(false);
   const alignedZoom = useRef(false);
+  const isZoomingOut = useRef(false);
+  const currentZoom = useRef(2);
   const headingRef = useRef(0);
   const userLocation = useRef<{ latitude: number; longitude: number } | null>(null);
 
@@ -118,7 +120,10 @@ export default function App() {
 
     CompassHeading.start(3, ({ heading }: { heading: number }) => {
       headingRef.current = heading;
-      mapRef.current?.animateCamera({ heading }, { duration: 150 });
+
+      if (!isZoomingOut.current) {
+        mapRef.current?.animateCamera({ heading }, { duration: 150 });
+      }
 
       if (userLocation.current) {
         const bearing = getBearing(userLocation.current, TARGET);
@@ -127,11 +132,38 @@ export default function App() {
 
         if (Math.abs(diff) < ALIGNED_THRESHOLD && !alignedZoom.current) {
           alignedZoom.current = true;
+          isZoomingOut.current = true;
+
           const km = haversineKm(userLocation.current, TARGET);
-          mapRef.current?.animateCamera(
-            { center: userLocation.current, zoom: zoomForDistance(km), heading },
-            { duration: 1000 },
-          );
+          const targetZoom = zoomForDistance(km);
+          const startZoom = currentZoom.current;
+          const startLat = userLocation.current.latitude;
+          const startLng = userLocation.current.longitude;
+          const midLat = (startLat + TARGET.latitude) / 2;
+          const midLng = (startLng + TARGET.longitude) / 2;
+
+          const TOTAL_MS = 4000;
+          const STEP_MS = 100;
+          const startTime = Date.now();
+
+          const timer = setInterval(() => {
+            const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
+            const e = easeInOut(t);
+            const zoom = startZoom + (targetZoom - startZoom) * e;
+            const centerLat = startLat + (midLat - startLat) * e;
+            const centerLng = startLng + (midLng - startLng) * e;
+
+            currentZoom.current = zoom;
+            mapRef.current?.animateCamera(
+              { center: { latitude: centerLat, longitude: centerLng }, zoom, heading: headingRef.current },
+              { duration: STEP_MS * 2 },
+            );
+
+            if (t >= 1) {
+              clearInterval(timer);
+              isZoomingOut.current = false;
+            }
+          }, STEP_MS);
         }
       }
     });
@@ -163,6 +195,7 @@ export default function App() {
         const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
         const zoom = ZOOM_START + (ZOOM_END - ZOOM_START) * easeInOut(t);
 
+        currentZoom.current = zoom;
         mapRef.current?.animateCamera(
           { center: { latitude, longitude }, zoom },
           { duration: STEP_MS * 2 },
@@ -258,6 +291,13 @@ export default function App() {
               strokeWidth={3}
             />
           )}
+          {showIndicator && (
+            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={styles.destinationMarker}>
+                <Text style={styles.destinationEmoji}>❤️</Text>
+              </View>
+            </Marker>
+          )}
         </MapView>
 
         {showIndicator && <CompassIndicator angleDiff={angleDiff} />}
@@ -346,5 +386,20 @@ const styles = StyleSheet.create({
   },
   kissEmoji: {
     fontSize: 30,
+  },
+  destinationMarker: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  destinationEmoji: {
+    fontSize: 22,
   },
 });
