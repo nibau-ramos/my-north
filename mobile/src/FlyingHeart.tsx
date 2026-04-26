@@ -52,8 +52,8 @@ export const FlyingHeart = React.memo(function FlyingHeart({
   // Bezier control points for the lost-heart path:
   // P1 goes backward + sideways (wrong direction), P2 approaches from the side
   const lostWander = Math.max(pathConfig.wanderDist, len * 0.35);
-  const P1x = startX - dx * 0.35 + px * pathConfig.perpDir * lostWander;
-  const P1y = startY - dy * 0.35 + py * pathConfig.perpDir * lostWander;
+  const P1x = startX + dx * 0.25 + px * pathConfig.perpDir * lostWander;
+  const P1y = startY + dy * 0.25 + py * pathConfig.perpDir * lostWander;
   const P2x = endX + px * pathConfig.perpDir * lostWander * 0.2;
   const P2y = endY + py * pathConfig.perpDir * lostWander * 0.2;
 
