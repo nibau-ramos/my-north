@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-const H = 22;
-const W = 28;
-const EDGE = 8;
-const MARCH = 16;
-const MARCH_MS = 480;
+const R = 45;
+const B = 3.5;
+const CAP_R = B + 1.5;
+const SPIN_MS = 1100;
 
 function indicatorColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
@@ -15,103 +14,91 @@ function indicatorColor(diff: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-function LeftArrow({ color, size = 1 }: { color: string; size?: number }) {
-  return (
-    <View style={{
-      width: 0, height: 0,
-      borderTopWidth: H * size,
-      borderBottomWidth: H * size,
-      borderRightWidth: W * size,
-      borderStyle: 'solid',
-      borderTopColor: 'transparent',
-      borderBottomColor: 'transparent',
-      borderRightColor: color,
-      shadowColor: color,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.85,
-      shadowRadius: 8,
-    }} />
-  );
-}
-
-function RightArrow({ color, size = 1 }: { color: string; size?: number }) {
-  return (
-    <View style={{
-      width: 0, height: 0,
-      borderTopWidth: H * size,
-      borderBottomWidth: H * size,
-      borderLeftWidth: W * size,
-      borderStyle: 'solid',
-      borderTopColor: 'transparent',
-      borderBottomColor: 'transparent',
-      borderLeftColor: color,
-      shadowColor: color,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.85,
-      shadowRadius: 8,
-    }} />
-  );
-}
-
 export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
   const THRESHOLD = 10;
-  const color = indicatorColor(angleDiff);
   const showLeft = angleDiff < -THRESHOLD;
   const showRight = angleDiff > THRESHOLD;
+  const show = showLeft || showRight;
+  const isCW = showRight;
+  const color = indicatorColor(angleDiff);
 
-  const marchAnim = useRef(new Animated.Value(0)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Sawtooth: slide smoothly in direction, snap back instantly — creates continuous flow
+    if (!show) return;
+    spinAnim.setValue(0);
     const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(marchAnim, {
-          toValue: 1,
-          duration: MARCH_MS,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.timing(marchAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ])
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: SPIN_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
     );
     anim.start();
     return () => anim.stop();
-  }, [marchAnim]);
+  }, [show, spinAnim]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const leftTranslate = marchAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -MARCH] });
-  const rightTranslate = marchAnim.interpolate({ inputRange: [0, 1], outputRange: [0, MARCH] });
-  const opacityMain = marchAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.9, 0.55] });
-  const opacityDim = marchAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.45, 0.38, 0.2] });
+  if (!show) return null;
 
+  const rotate = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  // scaleX: -1 mirrors the ring for CCW so the cap (at 3 o'clock) becomes the leading edge
+  // in both directions — no need to restart the animation when direction flips
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {showLeft && (
-        <>
-          <Animated.View style={[styles.edge, { left: EDGE, marginTop: -H, opacity: opacityMain, transform: [{ translateX: leftTranslate }] }]}>
-            <LeftArrow color={color} />
-          </Animated.View>
-          <Animated.View style={[styles.edge, { left: EDGE + W + 8, marginTop: -H * 0.7, opacity: opacityDim, transform: [{ translateX: leftTranslate }] }]}>
-            <LeftArrow color={color} size={0.7} />
-          </Animated.View>
-        </>
-      )}
-      {showRight && (
-        <>
-          <Animated.View style={[styles.edge, { right: EDGE, marginTop: -H, opacity: opacityMain, transform: [{ translateX: rightTranslate }] }]}>
-            <RightArrow color={color} />
-          </Animated.View>
-          <Animated.View style={[styles.edge, { right: EDGE + W + 8, marginTop: -H * 0.7, opacity: opacityDim, transform: [{ translateX: rightTranslate }] }]}>
-            <RightArrow color={color} size={0.7} />
-          </Animated.View>
-        </>
-      )}
+      <View style={styles.center}>
+        <Animated.View style={{ transform: [{ scaleX: isCW ? 1 : -1 }, { rotate }] }}>
+          {/* 270° arc — gap at bottom (borderBottomColor transparent) */}
+          <View
+            style={{
+              width: R * 2,
+              height: R * 2,
+              borderRadius: R,
+              borderWidth: B,
+              borderTopColor: color,
+              borderRightColor: color,
+              borderLeftColor: color,
+              borderBottomColor: 'transparent',
+              shadowColor: color,
+              shadowOpacity: 0.65,
+              shadowRadius: 7,
+              shadowOffset: { width: 0, height: 0 },
+            }}
+          />
+          {/* Leading-edge cap at 3 o'clock */}
+          <View
+            style={{
+              position: 'absolute',
+              right: -(CAP_R - B / 2),
+              top: R - CAP_R,
+              width: CAP_R * 2,
+              height: CAP_R * 2,
+              borderRadius: CAP_R,
+              backgroundColor: color,
+              shadowColor: color,
+              shadowOpacity: 0.9,
+              shadowRadius: 5,
+              shadowOffset: { width: 0, height: 0 },
+            }}
+          />
+        </Animated.View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  edge: {
+  center: {
     position: 'absolute',
-    top: '50%',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -349,7 +349,7 @@ export default function App() {
     if (!isAligned && kissAnimatingRef.current) {
       handleKissPressOut();
     }
-  }, [isAligned]);
+  }, [isAligned, handleKissPressOut]);
 
   useEffect(() => {
     const id = lineAnim.addListener(({ value }) => setLineProgress(value));
