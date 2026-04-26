@@ -121,6 +121,35 @@ export default function App() {
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
 
+  const triggerAlignmentZoomOut = useCallback(() => {
+    if (alignedZoom.current || !userLocation.current) return;
+    alignedZoom.current = true;
+    isZoomingOut.current = true;
+
+    const km = haversineKm(userLocation.current, TARGET);
+    const targetZoom = zoomForDistance(km);
+    const startZoom = currentZoom.current;
+    const userLat = userLocation.current.latitude;
+    const userLng = userLocation.current.longitude;
+    const TOTAL_MS = 4000;
+    const STEP_MS = 100;
+    const startTime = Date.now();
+
+    const timer = setInterval(() => {
+      const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
+      const zoom = startZoom + (targetZoom - startZoom) * easeInOut(t);
+      currentZoom.current = zoom;
+      mapRef.current?.animateCamera(
+        { center: { latitude: userLat, longitude: userLng }, zoom, heading: headingRef.current },
+        { duration: STEP_MS * 2 },
+      );
+      if (t >= 1) {
+        clearInterval(timer);
+        isZoomingOut.current = false;
+      }
+    }, STEP_MS);
+  }, []);
+
   useEffect(() => {
     CompassHeading.start(3, ({ heading }: { heading: number }) => {
       headingRef.current = heading;
@@ -135,41 +164,25 @@ export default function App() {
         const diff = normalizeDiff(bearing - heading);
         setAngleDiff(diff);
 
-        if (Math.abs(diff) < ALIGNED_THRESHOLD && !alignedZoom.current) {
-          alignedZoom.current = true;
-          isZoomingOut.current = true;
-
-          const km = haversineKm(userLocation.current, TARGET);
-          const targetZoom = zoomForDistance(km);
-          const startZoom = currentZoom.current;
-          const userLat = userLocation.current.latitude;
-          const userLng = userLocation.current.longitude;
-
-          const TOTAL_MS = 4000;
-          const STEP_MS = 100;
-          const startTime = Date.now();
-
-          const timer = setInterval(() => {
-            const t = Math.min((Date.now() - startTime) / TOTAL_MS, 1);
-            const zoom = startZoom + (targetZoom - startZoom) * easeInOut(t);
-
-            currentZoom.current = zoom;
-            mapRef.current?.animateCamera(
-              { center: { latitude: userLat, longitude: userLng }, zoom, heading: headingRef.current },
-              { duration: STEP_MS * 2 },
-            );
-
-            if (t >= 1) {
-              clearInterval(timer);
-              isZoomingOut.current = false;
-            }
-          }, STEP_MS);
+        if (Math.abs(diff) < ALIGNED_THRESHOLD) {
+          triggerAlignmentZoomOut();
         }
       }
     });
 
     return () => CompassHeading.stop();
-  }, []);
+  }, [triggerAlignmentZoomOut]);
+
+  // If already aligned when zoom-in completes, compass won't fire — check immediately
+  useEffect(() => {
+    if (!showIndicator || !userLocation.current) return;
+    const bearing = getBearing(userLocation.current, TARGET);
+    const diff = normalizeDiff(bearing - headingRef.current);
+    setAngleDiff(diff);
+    if (Math.abs(diff) < ALIGNED_THRESHOLD) {
+      triggerAlignmentZoomOut();
+    }
+  }, [showIndicator, triggerAlignmentZoomOut]);
 
   const onUserLocationChange = useCallback((event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
