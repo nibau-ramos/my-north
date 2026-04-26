@@ -12,13 +12,14 @@ interface Props {
   endY: number;
   size: number;
   emoji: string;
+  onArrive: () => void;
   onComplete: (id: number) => void;
 }
 
 // React.memo stops App's compass re-renders from reaching this component,
 // so the interpolations and animation stay stable for the full flight.
 export const FlyingHeart = React.memo(function FlyingHeart({
-  id, startX, startY, endX, endY, size, emoji, onComplete,
+  id, startX, startY, endX, endY, size, emoji, onArrive, onComplete,
 }: Props) {
   const progress = useRef(new Animated.Value(0)).current;
   const [exploding, setExploding] = useState(false);
@@ -86,6 +87,7 @@ export const FlyingHeart = React.memo(function FlyingHeart({
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (!finished) return;
+      onArrive();
       setExploding(true);
       Animated.parallel(
         frags.map(f =>

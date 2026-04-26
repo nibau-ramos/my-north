@@ -285,15 +285,14 @@ export default function App() {
     pulseAnim.setValue(1);
     setShowPulse(true);
     Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.8, duration: 180, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1.35, duration: 160, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
     ]).start(() => setShowPulse(false));
   }, [pulseAnim]);
 
   const removeHeart = useCallback((id: number) => {
     setFlyingHearts(prev => prev.filter(h => h.id !== id));
-    triggerDestinationPulse();
-  }, [triggerDestinationPulse]);
+  }, []);
 
   // Fire kiss immediately when orientation is lost mid-press
   useEffect(() => {
@@ -380,6 +379,7 @@ export default function App() {
                 endY={h.endY}
                 size={h.size}
                 emoji={h.emoji}
+                onArrive={triggerDestinationPulse}
                 onComplete={removeHeart}
               />
             ))}
