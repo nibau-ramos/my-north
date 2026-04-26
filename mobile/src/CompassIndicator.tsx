@@ -1,9 +1,9 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 
-const H = 22;   // arrow half-height
-const W = 28;   // arrow length
-const EDGE = 8; // margin from screen edge to arrow tip
+const H = 22;
+const W = 28;
+const EDGE = 8;
 
 function indicatorColor(diff: number): string {
   const t = Math.max(0, 1 - Math.abs(diff) / 90);
@@ -59,8 +59,21 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
   const showLeft = angleDiff < -THRESHOLD;
   const showRight = angleDiff > THRESHOLD;
 
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkAnim, { toValue: 0.1, duration: 350, useNativeDriver: true }),
+        Animated.timing(blinkAnim, { toValue: 1,   duration: 350, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Animated.View style={[StyleSheet.absoluteFill, { opacity: blinkAnim }]} pointerEvents="none">
       {showLeft && (
         <>
           <View style={[styles.leftEdge, { left: EDGE }]}>
@@ -81,7 +94,7 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
           </View>
         </>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
