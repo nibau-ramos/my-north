@@ -82,6 +82,9 @@ interface HeartEntry {
 
 export default function App() {
   const { width: screenW, height: screenH } = useWindowDimensions();
+  // Shift the blue dot ~30% of screen height below centre so more map is visible above
+  const mapTopPad = Math.round(screenH * 0.3);
+  const dotY = screenH / 2 + mapTopPad / 2;
   const mapRef = useRef<MapView>(null);
   const zoomDone = useRef(false);
   const alignedZoom = useRef(false);
@@ -254,7 +257,7 @@ export default function App() {
     selectedEmojiRef.current = emoji;
     isPressingRef.current = true;
     kissGrowAnim.setValue(0);
-    kissOriginRef.current = { x: screenW / 2, y: screenH / 2 };
+    kissOriginRef.current = { x: screenW / 2, y: dotY };
 
     try {
       if (userLocation.current) {
@@ -289,7 +292,7 @@ export default function App() {
     const startX = kissOriginRef.current.x;
     const startY = kissOriginRef.current.y;
     const userX = screenW / 2;
-    const userY = screenH / 2;
+    const userY = dotY;
     const headingAtLaunch = headingRef.current; // capture before async gap
 
     let endX = screenW / 2;
@@ -381,6 +384,7 @@ export default function App() {
           showsUserLocation
           onUserLocationChange={onUserLocationChange}
           showsCompass={false}
+          mapPadding={{ top: mapTopPad, right: 0, bottom: 0, left: 0 }}
           scrollEnabled={false}
           zoomEnabled
           rotateEnabled={false}
@@ -410,7 +414,7 @@ export default function App() {
         </MapView>
         )}
 
-        {showIndicator && <CompassIndicator angleDiff={angleDiff} />}
+        {showIndicator && <CompassIndicator angleDiff={angleDiff} dotOffsetY={mapTopPad / 2} />}
 
         {showPulse && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">

@@ -16,7 +16,7 @@ function indicatorColor(diff: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
+export function CompassIndicator({ angleDiff, dotOffsetY = 0 }: { angleDiff: number; dotOffsetY?: number }) {
   const THRESHOLD = 10;
   const showLeft = angleDiff < -THRESHOLD;
   const showRight = angleDiff > THRESHOLD;
@@ -53,7 +53,7 @@ export function CompassIndicator({ angleDiff }: { angleDiff: number }) {
   // scaleX: -1 mirrors the arc for CCW — a CW sweep in mirrored space appears CCW
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={styles.center}>
+      <View style={[styles.center, dotOffsetY ? { transform: [{ translateY: dotOffsetY }] } : undefined]}>
         <Animated.View
           style={{
             transform: [
