@@ -103,9 +103,10 @@ export default function App() {
   const [angleDiff, setAngleDiff] = useState(0);
   const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Destination pulse
+  // Destination pulse overlay (outside MapView — markers can't animate)
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [markerTracks, setMarkerTracks] = useState(false);
+  const pulseScreenPos = useRef({ x: 0, y: 0 });
+  const [showPulse, setShowPulse] = useState(false);
 
   // Kiss feature
   const kissGrowAnim = useRef(new Animated.Value(0)).current;
@@ -276,13 +277,17 @@ export default function App() {
     });
   }, [kissGrowAnim, screenW, screenH]);
 
-  const triggerDestinationPulse = useCallback(() => {
-    setMarkerTracks(true);
+  const triggerDestinationPulse = useCallback(async () => {
+    try {
+      const pt = await mapRef.current?.pointForCoordinate(TARGET);
+      if (pt) pulseScreenPos.current = { x: pt.x, y: pt.y };
+    } catch {}
     pulseAnim.setValue(1);
+    setShowPulse(true);
     Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.7, duration: 180, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 220, useNativeDriver: false }),
-    ]).start(() => setMarkerTracks(false));
+      Animated.timing(pulseAnim, { toValue: 1.8, duration: 180, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+    ]).start(() => setShowPulse(false));
   }, [pulseAnim]);
 
   const removeHeart = useCallback((id: number) => {
@@ -328,15 +333,40 @@ export default function App() {
             />
           )}
           {showIndicator && (
-            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={markerTracks}>
-              <Animated.View style={[styles.destinationMarker, { transform: [{ scale: pulseAnim }] }]}>
+            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={styles.destinationMarker}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
-              </Animated.View>
+              </View>
             </Marker>
           )}
         </MapView>
 
         {showIndicator && <CompassIndicator angleDiff={angleDiff} />}
+
+        {showPulse && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Animated.View
+              style={{
+                position: 'absolute',
+                left: pulseScreenPos.current.x - 19,
+                top: pulseScreenPos.current.y - 19,
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: 'white',
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOpacity: 0.35,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 2 },
+                transform: [{ scale: pulseAnim }],
+              }}
+            >
+              <Text style={styles.destinationEmoji}>❤️</Text>
+            </Animated.View>
+          </View>
+        )}
 
         {flyingHearts.length > 0 && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
