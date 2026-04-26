@@ -102,20 +102,13 @@ export default function App() {
 
   // Kiss feature
   const kissGrowAnim = useRef(new Animated.Value(0)).current;
-  const kissValRef = useRef(0);
+  const pressStartTime = useRef(0);
   const isPressingRef = useRef(false);
   const kissAnimatingRef = useRef(false);
   const kissOriginRef = useRef({ x: 0, y: 0 });
   const heartIdRef = useRef(0);
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
-
-  useEffect(() => {
-    const listenerId = kissGrowAnim.addListener(({ value }) => {
-      kissValRef.current = value;
-    });
-    return () => kissGrowAnim.removeListener(listenerId);
-  }, []);
 
   useEffect(() => {
     if (!showIndicator) return;
@@ -217,7 +210,6 @@ export default function App() {
     if (isPressingRef.current) return;
     isPressingRef.current = true;
     kissGrowAnim.setValue(0);
-    kissValRef.current = 0;
     kissOriginRef.current = { x: screenW / 2, y: screenH / 2 };
 
     try {
@@ -229,6 +221,7 @@ export default function App() {
 
     if (!isPressingRef.current) return; // released during the async lookup
 
+    pressStartTime.current = Date.now();
     setShowGrowingHeart(true);
     kissAnimatingRef.current = true;
     Animated.timing(kissGrowAnim, {
@@ -245,9 +238,10 @@ export default function App() {
     kissGrowAnim.stopAnimation();
     setShowGrowingHeart(false);
 
-    const val = kissValRef.current;
+    // Time elapsed since animation started, capped at 2000ms → 0..1
+    const val = Math.min((Date.now() - pressStartTime.current) / 2000, 1);
     console.log('[kiss] val:', val);
-    if (val < 0.05) return;
+    if (val < 0.025) return;
 
     // 36px base * scale (0.5..2.0) → 18..72 visual size
     const heartSize = Math.round(36 * (0.5 + val * 1.5));
