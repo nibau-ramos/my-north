@@ -6,12 +6,6 @@ import CompassHeading from 'react-native-compass-heading';
 import { CompassIndicator } from './src/CompassIndicator';
 import { FlyingHeart } from './src/FlyingHeart';
 
-const WORLD_REGION = {
-  latitude: 20,
-  longitude: 0,
-  latitudeDelta: 160,
-  longitudeDelta: 360,
-};
 
 const TARGET = {
   latitude: -8.039977532613815,
@@ -67,13 +61,6 @@ function normalizeDiff(angle: number): number {
   return a;
 }
 
-function lineColor(diff: number): string {
-  const t = Math.max(0, 1 - Math.abs(diff) / 90);
-  const r = Math.round(255 * (1 - t));
-  const g = Math.round(82 + 148 * t);
-  const b = Math.round(82 + 36 * t);
-  return `rgb(${r},${g},${b})`;
-}
 
 function easeInOut(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -112,6 +99,10 @@ export default function App() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseScreenPos = useRef({ x: 0, y: 0 });
   const [showPulse, setShowPulse] = useState(false);
+
+  // Portal line fade-in
+  const lineAnim = useRef(new Animated.Value(0)).current;
+  const [lineProgress, setLineProgress] = useState(0);
 
   // Kiss feature
   const kissGrowAnim = useRef(new Animated.Value(0)).current;
@@ -324,7 +315,18 @@ export default function App() {
     }
   }, [isAligned]);
 
-  const color = lineColor(angleDiff);
+  useEffect(() => {
+    const id = lineAnim.addListener(({ value }) => setLineProgress(value));
+    return () => lineAnim.removeListener(id);
+  }, [lineAnim]);
+
+  useEffect(() => {
+    if (isAligned) {
+      Animated.timing(lineAnim, { toValue: 1, duration: 700, useNativeDriver: false }).start();
+    } else {
+      lineAnim.setValue(0);
+    }
+  }, [isAligned, lineAnim]);
 
   const kissScale = kissGrowAnim.interpolate({
     inputRange: [0, 1],
@@ -348,12 +350,19 @@ export default function App() {
           rotateEnabled={false}
           pitchEnabled={false}
         >
-          {showIndicator && userPos && (
-            <Polyline
-              coordinates={[userPos, TARGET]}
-              strokeColor={color}
-              strokeWidth={3}
-            />
+          {isAligned && userPos && (
+            <>
+              <Polyline
+                coordinates={[userPos, TARGET]}
+                strokeColor={`rgba(255,140,170,${0.35 * lineProgress})`}
+                strokeWidth={22}
+              />
+              <Polyline
+                coordinates={[userPos, TARGET]}
+                strokeColor={`rgba(255,210,225,${0.9 * lineProgress})`}
+                strokeWidth={3}
+              />
+            </>
           )}
           {showIndicator && !showPulse && (
             <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
