@@ -330,17 +330,16 @@ export default function App() {
 
         {showGrowingHeart && (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Animated.Text
+            <Animated.View
               style={{
                 position: 'absolute',
                 left: kissOriginRef.current.x - 18,
                 top: kissOriginRef.current.y - 18,
-                fontSize: 36,
                 transform: [{ scale: kissScale }],
               }}
             >
-              ❤️
-            </Animated.Text>
+              <Text style={styles.kissEmoji}>❤️</Text>
+            </Animated.View>
           </View>
         )}
 

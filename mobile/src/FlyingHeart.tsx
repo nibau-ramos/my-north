@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Text } from 'react-native';
 
 const FLIGHT_MS = 2400;
 const OSCILLATIONS = 2.5;
@@ -55,7 +55,7 @@ export function FlyingHeart({ id, startX, startY, endX, endY, size, onComplete }
     Animated.timing(progress, {
       toValue: 1,
       duration: FLIGHT_MS,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start(({ finished }) => {
       if (!finished) return;
       setExploding(true);
@@ -82,19 +82,18 @@ export function FlyingHeart({ id, startX, startY, endX, endY, size, onComplete }
           const op = f.anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [1, 1, 0] });
           const fsc = f.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.8, 1.3, 0.4] });
           return (
-            <Animated.Text
+            <Animated.View
               key={i}
               style={{
                 position: 'absolute',
                 left: fx,
                 top: fy,
-                fontSize: 14,
                 opacity: op,
                 transform: [{ scale: fsc }],
               }}
             >
-              ❤️
-            </Animated.Text>
+              <Text style={{ fontSize: 14 }}>❤️</Text>
+            </Animated.View>
           );
         })}
       </>
@@ -102,16 +101,15 @@ export function FlyingHeart({ id, startX, startY, endX, endY, size, onComplete }
   }
 
   return (
-    <Animated.Text
+    <Animated.View
       style={{
         position: 'absolute',
         left: 0,
         top: 0,
-        fontSize: size,
         transform: [{ translateX: tx }, { translateY: ty }, { scale: sc }],
       }}
     >
-      ❤️
-    </Animated.Text>
+      <Text style={{ fontSize: size }}>❤️</Text>
+    </Animated.View>
   );
 }
