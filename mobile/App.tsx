@@ -217,6 +217,7 @@ export default function App() {
     isPressingRef.current = true;
     kissGrowAnim.setValue(0);
     kissValRef.current = 0;
+    kissOriginRef.current = { x: screenW / 2, y: screenH / 2 };
 
     try {
       if (userLocation.current) {
@@ -225,13 +226,15 @@ export default function App() {
       }
     } catch {}
 
+    if (!isPressingRef.current) return; // released during the async lookup
+
     setShowGrowingHeart(true);
     Animated.timing(kissGrowAnim, {
       toValue: 1,
       duration: 2000,
       useNativeDriver: false,
     }).start();
-  }, [kissGrowAnim]);
+  }, [kissGrowAnim, screenW, screenH]);
 
   const handleKissPressOut = useCallback(async () => {
     if (!isPressingRef.current) return;
@@ -247,23 +250,20 @@ export default function App() {
     const startX = kissOriginRef.current.x;
     const startY = kissOriginRef.current.y;
 
+    let endX = screenW / 2;
+    let endY = 100;
     try {
       const pt = await mapRef.current?.pointForCoordinate(TARGET);
-      setFlyingHearts(prev => {
-        if (prev.length >= 5) return prev;
-        return [
-          ...prev,
-          {
-            id: heartIdRef.current++,
-            startX,
-            startY,
-            endX: pt?.x ?? screenW * 0.8,
-            endY: pt?.y ?? screenH * 0.2,
-            size: heartSize,
-          },
-        ];
-      });
+      if (pt) { endX = pt.x; endY = pt.y; }
     } catch {}
+
+    setFlyingHearts(prev => {
+      if (prev.length >= 5) return prev;
+      return [
+        ...prev,
+        { id: heartIdRef.current++, startX, startY, endX, endY, size: heartSize },
+      ];
+    });
   }, [kissGrowAnim, screenW, screenH]);
 
   const removeHeart = useCallback((id: number) => {
