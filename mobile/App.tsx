@@ -104,6 +104,7 @@ export default function App() {
   const kissGrowAnim = useRef(new Animated.Value(0)).current;
   const kissValRef = useRef(0);
   const isPressingRef = useRef(false);
+  const kissOriginRef = useRef({ x: 0, y: 0 });
   const heartIdRef = useRef(0);
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
@@ -211,12 +212,20 @@ export default function App() {
 
   const isAligned = showIndicator && Math.abs(angleDiff) < ALIGNED_THRESHOLD;
 
-  const handleKissPressIn = useCallback(() => {
+  const handleKissPressIn = useCallback(async () => {
     if (isPressingRef.current) return;
     isPressingRef.current = true;
-    setShowGrowingHeart(true);
     kissGrowAnim.setValue(0);
     kissValRef.current = 0;
+
+    try {
+      if (userLocation.current) {
+        const pt = await mapRef.current?.pointForCoordinate(userLocation.current);
+        if (pt) kissOriginRef.current = { x: pt.x, y: pt.y };
+      }
+    } catch {}
+
+    setShowGrowingHeart(true);
     Animated.timing(kissGrowAnim, {
       toValue: 1,
       duration: 2000,
@@ -235,8 +244,8 @@ export default function App() {
 
     // 36px base * scale (0.5..2.0) → 18..72 visual size
     const heartSize = Math.round(36 * (0.5 + val * 1.5));
-    const startX = screenW / 2;
-    const startY = screenH / 2;
+    const startX = kissOriginRef.current.x;
+    const startY = kissOriginRef.current.y;
 
     try {
       const pt = await mapRef.current?.pointForCoordinate(TARGET);
@@ -324,8 +333,8 @@ export default function App() {
             <Animated.Text
               style={{
                 position: 'absolute',
-                left: screenW / 2 - 18,
-                top: screenH / 2 - 18,
+                left: kissOriginRef.current.x - 18,
+                top: kissOriginRef.current.y - 18,
                 fontSize: 36,
                 transform: [{ scale: kissScale }],
               }}
