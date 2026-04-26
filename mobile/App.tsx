@@ -270,6 +270,13 @@ export default function App() {
     setFlyingHearts(prev => prev.filter(h => h.id !== id));
   }, []);
 
+  // Fire kiss immediately when orientation is lost mid-press
+  useEffect(() => {
+    if (!isAligned && isPressingRef.current) {
+      handleKissPressOut();
+    }
+  }, [isAligned]);
+
   const color = lineColor(angleDiff);
 
   const kissScale = kissGrowAnim.interpolate({
