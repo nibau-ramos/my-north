@@ -103,6 +103,10 @@ export default function App() {
   const [angleDiff, setAngleDiff] = useState(0);
   const [userPos, setUserPos] = useState<{ latitude: number; longitude: number } | null>(null);
 
+  // Destination pulse
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [markerTracks, setMarkerTracks] = useState(false);
+
   // Kiss feature
   const kissGrowAnim = useRef(new Animated.Value(0)).current;
   const pressStartTime = useRef(0);
@@ -272,9 +276,19 @@ export default function App() {
     });
   }, [kissGrowAnim, screenW, screenH]);
 
+  const triggerDestinationPulse = useCallback(() => {
+    setMarkerTracks(true);
+    pulseAnim.setValue(1);
+    Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.7, duration: 180, useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 220, useNativeDriver: false }),
+    ]).start(() => setMarkerTracks(false));
+  }, [pulseAnim]);
+
   const removeHeart = useCallback((id: number) => {
     setFlyingHearts(prev => prev.filter(h => h.id !== id));
-  }, []);
+    triggerDestinationPulse();
+  }, [triggerDestinationPulse]);
 
   // Fire kiss immediately when orientation is lost mid-press
   useEffect(() => {
@@ -314,10 +328,10 @@ export default function App() {
             />
           )}
           {showIndicator && (
-            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.destinationMarker}>
+            <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={markerTracks}>
+              <Animated.View style={[styles.destinationMarker, { transform: [{ scale: pulseAnim }] }]}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
-              </View>
+              </Animated.View>
             </Marker>
           )}
         </MapView>
