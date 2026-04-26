@@ -5,7 +5,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import CompassHeading from 'react-native-compass-heading';
 import { CompassIndicator } from './src/CompassIndicator';
 import { FlyingHeart } from './src/FlyingHeart';
-import { PortalParticles } from './src/PortalParticles';
 
 
 const TARGET = {
@@ -80,11 +79,6 @@ interface HeartEntry {
   emoji: string;
 }
 
-interface PortalConfig {
-  destOffsetDx: number;
-  destOffsetDy: number;
-  headingAtCapture: number;
-}
 
 export default function App() {
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -126,7 +120,7 @@ export default function App() {
   const heartIdRef = useRef(0);
   const [showGrowingHeart, setShowGrowingHeart] = useState(false);
   const [flyingHearts, setFlyingHearts] = useState<HeartEntry[]>([]);
-  const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
+  const [canalPulse, setCanalPulse] = useState(1);
 
   const triggerAlignmentZoomOut = useCallback(() => {
     if (alignedZoom.current || !userLocation.current) return;
@@ -243,20 +237,17 @@ export default function App() {
   const isAligned = showIndicator && Math.abs(angleDiff) < ALIGNED_THRESHOLD;
 
   useEffect(() => {
-    if (isAligned) {
-      mapRef.current?.pointForCoordinate(TARGET).then(pt => {
-        if (pt) {
-          setPortalConfig({
-            destOffsetDx: pt.x - screenW / 2,
-            destOffsetDy: pt.y - screenH / 2,
-            headingAtCapture: headingRef.current,
-          });
-        }
-      }).catch(() => {});
-    } else {
-      setPortalConfig(null);
+    if (!isAligned) {
+      setCanalPulse(1);
+      return;
     }
-  }, [isAligned, screenW, screenH]);
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const t = (Date.now() - startTime) / 2200;
+      setCanalPulse(0.72 + 0.28 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2)));
+    }, 50);
+    return () => clearInterval(timer);
+  }, [isAligned]);
 
   const handleKissPressIn = useCallback(async (emoji: string) => {
     if (isPressingRef.current) return;
@@ -399,12 +390,12 @@ export default function App() {
             <>
               <Polyline
                 coordinates={[userPos, TARGET]}
-                strokeColor={`rgba(255,140,170,${0.35 * lineProgress})`}
+                strokeColor={`rgba(255,140,170,${0.35 * lineProgress * canalPulse})`}
                 strokeWidth={22}
               />
               <Polyline
                 coordinates={[userPos, TARGET]}
-                strokeColor={`rgba(255,210,225,${0.9 * lineProgress})`}
+                strokeColor={`rgba(255,210,225,${0.9 * lineProgress * canalPulse})`}
                 strokeWidth={3}
               />
             </>
@@ -443,17 +434,6 @@ export default function App() {
               </Animated.View>
             </Animated.View>
           </View>
-        )}
-
-        {isAligned && portalConfig && (
-          <PortalParticles
-            userX={screenW / 2}
-            userY={screenH / 2}
-            destOffsetDx={portalConfig.destOffsetDx}
-            destOffsetDy={portalConfig.destOffsetDy}
-            headingAtCapture={portalConfig.headingAtCapture}
-            headingRef={headingRef}
-          />
         )}
 
         {flyingHearts.length > 0 && (
