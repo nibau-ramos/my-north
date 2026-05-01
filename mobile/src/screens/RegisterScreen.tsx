@@ -14,6 +14,11 @@ import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../context/AuthContext';
 import * as authService from '../services/authService';
 import { setAuthToken } from '../services/api';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
@@ -26,6 +31,25 @@ export default function RegisterScreen({ navigation }: Props) {
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  async function handleGoogleSignIn() {
+    setError('');
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.signIn();
+      const { idToken } = await GoogleSignin.getTokens();
+      if (!idToken) throw new Error('No ID token');
+      const { token, user } = await authService.googleSignIn(idToken);
+      setAuthToken(token);
+      await login(token, user);
+    } catch (e: any) {
+      if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) return;
+      setError('Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleRegister() {
     setError('');
@@ -90,6 +114,10 @@ export default function RegisterScreen({ navigation }: Props) {
         )}
       </Pressable>
 
+      <Pressable style={styles.googleButton} onPress={handleGoogleSignIn} disabled={loading}>
+        <Text style={styles.googleButtonText}>Continue with Google</Text>
+      </Pressable>
+
       <Pressable onPress={() => navigation.goBack()}>
         <Text style={styles.link}>Already have an account? Sign in</Text>
       </Pressable>
@@ -140,7 +168,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 12,
+  },
+  googleButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 24,
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
   },
   buttonText: {
     color: '#fff',
