@@ -156,14 +156,16 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: '#ff4d6d',
+    backgroundColor: '#fff',
     borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#ff4d6d',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   buttonText: {
-    color: '#fff',
+    color: '#ff4d6d',
     fontSize: 16,
     fontWeight: '600',
   },
