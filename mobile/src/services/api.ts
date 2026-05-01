@@ -1,10 +1,15 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
-import { DEV_HOST } from '../devConfig';
+import { Platform, TurboModuleRegistry } from 'react-native';
 
 function getDevBaseUrl(): string {
   if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
-  return `http://${DEV_HOST}:3000`;
+  try {
+    const SourceCode = TurboModuleRegistry.get<{ getConstants(): { scriptURL?: string } }>('SourceCode');
+    const scriptURL = SourceCode?.getConstants()?.scriptURL;
+    const match = scriptURL?.match(/^https?:\/\/([^:/]+)/);
+    if (match) return `http://${match[1]}:3000`;
+  } catch {}
+  return 'http://localhost:3000';
 }
 
 const BASE_URL = __DEV__ ? getDevBaseUrl() : 'https://api.mynorth.app';
