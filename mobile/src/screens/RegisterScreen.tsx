@@ -45,6 +45,7 @@ export default function RegisterScreen({ navigation }: Props) {
       await login(token, user);
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) return;
+      console.error('[GoogleSignIn] error:', JSON.stringify(e));
       setError('Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);

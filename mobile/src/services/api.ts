@@ -1,11 +1,16 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
-const BASE_URL = __DEV__
-  ? Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000'
-  : 'https://api.mynorth.app';
+function getDevBaseUrl(): string {
+  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
+  // Derive host from Metro bundler URL — works for both simulator and physical device
+  const scriptURL: string | undefined = NativeModules.SourceCode?.scriptURL;
+  const match = scriptURL?.match(/^https?:\/\/([^:/]+)/);
+  const host = match ? match[1] : 'localhost';
+  return `http://${host}:3000`;
+}
+
+const BASE_URL = __DEV__ ? getDevBaseUrl() : 'https://api.mynorth.app';
 
 const api = axios.create({ baseURL: BASE_URL });
 
