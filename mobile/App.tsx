@@ -10,7 +10,10 @@ const GOOGLE_WEB_CLIENT_ID = '860710232417-9ru77loq6ln7iavuf920l3k2o574f4tu.apps
 
 export default function App() {
   useEffect(() => {
-    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      iosClientId: '860710232417-78f9qtji8urid9pfbtnpga84q4sbunul.apps.googleusercontent.com',
+    });
   }, []);
 
   return (
