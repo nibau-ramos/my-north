@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Polyline, Marker } from 'react-native-maps';
 import CompassHeading from 'react-native-compass-heading';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompassIndicator } from '../CompassIndicator';
 import { FlyingHeart } from '../FlyingHeart';
+import { useAuth } from '../context/AuthContext';
 
 const TARGET = {
   latitude: -8.039977532613815,
@@ -74,6 +76,8 @@ interface HeartEntry {
 }
 
 export default function MapScreen() {
+  const { logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const mapTopPad = Math.round(screenH * 0.3);
   const dotY = screenH / 2 + mapTopPad / 2;
@@ -442,6 +446,13 @@ export default function MapScreen() {
         </View>
       )}
 
+      <Pressable
+        style={[styles.logoutButton, { top: insets.top + 12 }]}
+        onPress={logout}
+      >
+        <Text style={styles.logoutText}>Log out</Text>
+      </Pressable>
+
       {isAligned && (
         <View pointerEvents="box-none" style={styles.kissButtonContainer}>
           <View style={styles.kissButtonRow}>
@@ -473,6 +484,19 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  logoutButton: {
+    position: 'absolute',
+    right: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  logoutText: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '500',
+  },
   kissButtonContainer: {
     position: 'absolute',
     bottom: 80,
