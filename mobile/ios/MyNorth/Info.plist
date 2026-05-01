@@ -24,6 +24,22 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Replace with your reversed iOS OAuth client ID from Google Cloud Console -->
+				<!-- Example: com.googleusercontent.apps.YOUR_IOS_CLIENT_ID -->
+				<string>REPLACE_WITH_REVERSED_IOS_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<!-- Replace with your iOS OAuth client ID from Google Cloud Console -->
+	<string>REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com</string>
 	<key>GMSApiKey</key>
 	<string>AIzaSyD7_1yq0ysUpJqbjDJ9faE091wQ3IpO9jQ</string>
 	<key>LSRequiresIPhoneOS</key>
