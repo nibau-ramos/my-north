@@ -33,13 +33,13 @@
 			<array>
 				<!-- Replace with your reversed iOS OAuth client ID from Google Cloud Console -->
 				<!-- Example: com.googleusercontent.apps.YOUR_IOS_CLIENT_ID -->
-				<string>REPLACE_WITH_REVERSED_IOS_CLIENT_ID</string>
+				<string>com.googleusercontent.apps.860710232417-78f9qtji8urid9pfbtnpga84q4sbunul</string>
 			</array>
 		</dict>
 	</array>
 	<key>GIDClientID</key>
 	<!-- Replace with your iOS OAuth client ID from Google Cloud Console -->
-	<string>REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+	<string>860710232417-78f9qtji8urid9pfbtnpga84q4sbunul.apps.googleusercontent.com</string>
 	<key>GMSApiKey</key>
 	<string>AIzaSyD7_1yq0ysUpJqbjDJ9faE091wQ3IpO9jQ</string>
 	<key>LSRequiresIPhoneOS</key>
