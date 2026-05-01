@@ -21,7 +21,8 @@
     "react-native-compass-heading": "^2.0.2",
     "react-native-maps": "^1.27.2",
     "react-native-safe-area-context": "^5.5.2",
-    "react-native-screens": "^4.24.0"
+    "react-native-screens": "^4.24.0",
+    "react-native-svg": "^15.15.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

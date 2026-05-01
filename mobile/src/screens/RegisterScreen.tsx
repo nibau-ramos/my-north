@@ -16,10 +16,10 @@ import * as authService from '../services/authService';
 import { setAuthToken } from '../services/api';
 import {
   GoogleSignin,
-  GoogleSigninButton,
   isErrorWithCode,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import GoogleButton from '../components/GoogleButton';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
@@ -116,13 +116,7 @@ export default function RegisterScreen({ navigation }: Props) {
         )}
       </Pressable>
 
-      <GoogleSigninButton
-        style={styles.googleButton}
-        size={GoogleSigninButton.Size.Wide}
-        color={GoogleSigninButton.Color.Light}
-        onPress={handleGoogleSignIn}
-        disabled={loading}
-      />
+      <GoogleButton onPress={handleGoogleSignIn} disabled={loading} loading={loading} />
 
       <Pressable onPress={() => navigation.goBack()}>
         <Text style={styles.link}>Already have an account? Sign in</Text>
@@ -177,11 +171,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-  },
-  googleButton: {
-    width: '100%',
-    height: 48,
-    marginBottom: 24,
   },
   buttonText: {
     color: '#ff4d6d',
