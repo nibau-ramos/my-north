@@ -3,9 +3,14 @@ import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import MapView, { PROVIDER_GOOGLE, Polyline, Marker } from 'react-native-maps';
 import CompassHeading from 'react-native-compass-heading';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompassIndicator } from '../CompassIndicator';
 import { FlyingHeart } from '../FlyingHeart';
 import { useAuth } from '../context/AuthContext';
+import * as pairingService from '../services/pairingService';
+import type { PairingStatus } from '../services/pairingService';
+import type { AppStackParamList } from '../navigation/RootNavigator';
 
 const TARGET = {
   latitude: -8.039977532613815,
@@ -78,6 +83,14 @@ interface HeartEntry {
 export default function MapScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const [pairingStatus, setPairingStatus] = useState<PairingStatus | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      pairingService.getStatus().then(setPairingStatus).catch(() => {});
+    }, []),
+  );
   const { width: screenW, height: screenH } = useWindowDimensions();
   const mapTopPad = Math.round(screenH * 0.3);
   const dotY = screenH / 2 + mapTopPad / 2;
@@ -453,6 +466,27 @@ export default function MapScreen() {
         <Text style={styles.logoutText}>Log out</Text>
       </Pressable>
 
+      <Pressable
+        style={[styles.pairingBadge, { top: insets.top + 12 }]}
+        onPress={() => navigation.navigate('Pairing')}
+      >
+        {pairingStatus?.status === 'linked' ? (
+          <>
+            <View style={[styles.pairingDot, styles.pairingDotGreen]} />
+            <Text style={styles.pairingText} numberOfLines={1}>
+              {pairingStatus.partnerEmail.split('@')[0]}
+            </Text>
+          </>
+        ) : pairingStatus?.status === 'pending' ? (
+          <>
+            <View style={[styles.pairingDot, styles.pairingDotOrange]} />
+            <Text style={styles.pairingText}>Pending</Text>
+          </>
+        ) : (
+          <Text style={styles.pairingTextEmpty}>♡</Text>
+        )}
+      </Pressable>
+
       {isAligned && (
         <View pointerEvents="box-none" style={styles.kissButtonContainer}>
           <View style={styles.kissButtonRow}>
@@ -496,6 +530,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#555',
     fontWeight: '500',
+  },
+  pairingBadge: {
+    position: 'absolute',
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    maxWidth: 140,
+  },
+  pairingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  pairingDotGreen: {
+    backgroundColor: '#22c55e',
+  },
+  pairingDotOrange: {
+    backgroundColor: '#f97316',
+  },
+  pairingText: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '500',
+  },
+  pairingTextEmpty: {
+    fontSize: 16,
+    color: '#ff4d6d',
   },
   kissButtonContainer: {
     position: 'absolute',

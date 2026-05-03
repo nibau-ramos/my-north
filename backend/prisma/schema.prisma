@@ -8,10 +8,33 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String       @id @default(cuid())
+  email        String       @unique
   passwordHash String?
-  googleId     String?  @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  googleId     String?      @unique
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  sentInvite   Invite?      @relation("SentInvite")
+  connectionsA Connection[] @relation("ConnectionA")
+  connectionsB Connection[] @relation("ConnectionB")
+}
+
+model Invite {
+  id         String   @id @default(cuid())
+  fromUserId String   @unique
+  toEmail    String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  fromUser   User     @relation("SentInvite", fields: [fromUserId], references: [id])
+}
+
+model Connection {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+  userA     User     @relation("ConnectionA", fields: [userAId], references: [id])
+  userB     User     @relation("ConnectionB", fields: [userBId], references: [id])
+
+  @@unique([userAId, userBId])
 }

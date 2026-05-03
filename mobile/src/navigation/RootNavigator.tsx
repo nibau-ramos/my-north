@@ -5,14 +5,20 @@ import LoadingScreen from '../screens/LoadingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import MapScreen from '../screens/MapScreen';
+import PairingScreen from '../screens/PairingScreen';
 
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
 };
 
+export type AppStackParamList = {
+  Map: undefined;
+  Pairing: undefined;
+};
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const AppStack = createNativeStackNavigator();
+const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 export default function RootNavigator() {
   const { authState } = useAuth();
@@ -33,6 +39,7 @@ export default function RootNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Map" component={MapScreen} />
+      <AppStack.Screen name="Pairing" component={PairingScreen} />
     </AppStack.Navigator>
   );
 }
