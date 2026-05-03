@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import LoadingScreen from '../screens/LoadingScreen';
@@ -6,6 +6,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import MapScreen from '../screens/MapScreen';
 import PairingScreen from '../screens/PairingScreen';
+import * as pairingService from '../services/pairingService';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -17,17 +18,48 @@ export type AppStackParamList = {
   Pairing: undefined;
 };
 
+type PairingGateContextType = {
+  onLinked: () => void;
+  onUnlinked: () => void;
+};
+
+export const PairingGateContext = createContext<PairingGateContextType>({
+  onLinked: () => {},
+  onUnlinked: () => {},
+});
+
+export function usePairingGate() {
+  return useContext(PairingGateContext);
+}
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const AppStack = createNativeStackNavigator<AppStackParamList>();
+const LinkedStack = createNativeStackNavigator<AppStackParamList>();
+const UnlinkedStack = createNativeStackNavigator<{ Pairing: undefined }>();
+
+type Phase = 'loading' | 'unauthenticated' | 'unlinked' | 'linked';
 
 export default function RootNavigator() {
   const { authState } = useAuth();
+  const [phase, setPhase] = useState<Phase>('loading');
 
-  if (authState.status === 'loading') {
-    return <LoadingScreen />;
-  }
+  useEffect(() => {
+    if (authState.status === 'loading') {
+      setPhase('loading');
+      return;
+    }
+    if (authState.status === 'unauthenticated') {
+      setPhase('unauthenticated');
+      return;
+    }
+    pairingService
+      .getStatus()
+      .then(s => setPhase(s.status === 'linked' ? 'linked' : 'unlinked'))
+      .catch(() => setPhase('unlinked'));
+  }, [authState.status]);
 
-  if (authState.status === 'unauthenticated') {
+  if (phase === 'loading') return <LoadingScreen />;
+
+  if (phase === 'unauthenticated') {
     return (
       <AuthStack.Navigator screenOptions={{ headerShown: false }}>
         <AuthStack.Screen name="Login" component={LoginScreen} />
@@ -36,10 +68,22 @@ export default function RootNavigator() {
     );
   }
 
+  if (phase === 'unlinked') {
+    return (
+      <PairingGateContext.Provider value={{ onLinked: () => setPhase('linked'), onUnlinked: () => {} }}>
+        <UnlinkedStack.Navigator screenOptions={{ headerShown: false }}>
+          <UnlinkedStack.Screen name="Pairing" component={PairingScreen} />
+        </UnlinkedStack.Navigator>
+      </PairingGateContext.Provider>
+    );
+  }
+
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name="Map" component={MapScreen} />
-      <AppStack.Screen name="Pairing" component={PairingScreen} />
-    </AppStack.Navigator>
+    <PairingGateContext.Provider value={{ onLinked: () => {}, onUnlinked: () => setPhase('unlinked') }}>
+      <LinkedStack.Navigator screenOptions={{ headerShown: false }}>
+        <LinkedStack.Screen name="Map" component={MapScreen} />
+        <LinkedStack.Screen name="Pairing" component={PairingScreen} />
+      </LinkedStack.Navigator>
+    </PairingGateContext.Provider>
   );
 }

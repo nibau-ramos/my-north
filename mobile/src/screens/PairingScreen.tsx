@@ -10,17 +10,16 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { AppStackParamList } from '../navigation/RootNavigator';
+import { useNavigation } from '@react-navigation/native';
+import { usePairingGate } from '../navigation/RootNavigator';
 import * as pairingService from '../services/pairingService';
 import type { PairingStatus } from '../services/pairingService';
 
-type Props = {
-  navigation: NativeStackNavigationProp<AppStackParamList, 'Pairing'>;
-};
-
-export default function PairingScreen({ navigation }: Props) {
+export default function PairingScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const { onLinked, onUnlinked } = usePairingGate();
+
   const [status, setStatus] = useState<PairingStatus | null>(null);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,6 +49,7 @@ export default function PairingScreen({ navigation }: Props) {
       const s = await pairingService.sendInvite(email.trim());
       setStatus(s);
       setEmail('');
+      if (s.status === 'linked') onLinked();
     } catch (e: any) {
       setError(e?.response?.data?.error ?? 'Failed to send invite.');
     } finally {
@@ -76,6 +76,7 @@ export default function PairingScreen({ navigation }: Props) {
     try {
       const s = await pairingService.breakLink();
       setStatus(s);
+      onUnlinked();
     } catch {
       setError('Failed to disconnect.');
     } finally {
@@ -88,16 +89,20 @@ export default function PairingScreen({ navigation }: Props) {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }
 
+  const canGoBack = navigation.canGoBack();
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Pressable style={styles.back} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back</Text>
-      </Pressable>
+      {canGoBack && (
+        <Pressable style={styles.back} onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>← Back</Text>
+        </Pressable>
+      )}
 
-      <Text style={styles.title}>Connection</Text>
+      <Text style={[styles.title, !canGoBack && styles.titleGate]}>Connection</Text>
 
       {loading && !status ? (
         <ActivityIndicator color="#ff4d6d" size="large" />
@@ -190,6 +195,9 @@ const styles = StyleSheet.create({
     color: '#ff4d6d',
     marginBottom: 32,
     marginTop: 16,
+  },
+  titleGate: {
+    marginTop: 48,
   },
   section: {
     width: '100%',
