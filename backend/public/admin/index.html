@@ -164,14 +164,20 @@
     const fmt = d => new Date(d).toLocaleString('pt-PT');
 
     // --- Tabs ---
+    function activateTab(tab) {
+      const validTabs = ['users', 'invites', 'connections', 'admins'];
+      if (!validTabs.includes(tab)) tab = 'users';
+      document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      loaders[tab]?.();
+    }
+
     document.querySelectorAll('nav button').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        btn.classList.add('active');
         const tab = btn.dataset.tab;
-        document.getElementById('tab-' + tab).classList.add('active');
-        loaders[tab]?.();
+        history.replaceState(null, '', '#' + tab);
+        activateTab(tab);
       });
     });
 
@@ -359,9 +365,12 @@
 
     const loaders = { users: loadUsers, invites: loadInvites, connections: loadConnections, admins: loadAdmins };
 
-    // Load current admin ID then initial tab
+    // Load current admin ID then restore tab from hash
     let currentAdminId = null;
-    api('GET', '/me').then(r => r.json()).then(d => { currentAdminId = d.id; loadUsers(); });
+    api('GET', '/me').then(r => r.json()).then(d => {
+      currentAdminId = d.id;
+      activateTab(location.hash.slice(1) || 'users');
+    });
   </script>
 </body>
 </html>
