@@ -292,9 +292,10 @@
       openModal('Editar administrador', username);
     };
 
-    document.getElementById('modalCancel').addEventListener('click', () => {
-      document.getElementById('adminModal').classList.remove('open');
-    });
+    function closeModal() { document.getElementById('adminModal').classList.remove('open'); }
+
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
     document.getElementById('modalSave').addEventListener('click', async () => {
       const username = document.getElementById('modalUsername').value.trim();
