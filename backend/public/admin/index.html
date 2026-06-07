@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My North — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #111; }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 700; color: #4f46e5; }
+    header button {
+      background: none;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: .85rem;
+      color: #555;
+    }
+    header button:hover { background: #f9fafb; }
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 32px;
+      display: flex;
+      gap: 4px;
+    }
+    nav button {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-size: .9rem;
+      color: #555;
+      font-weight: 500;
+    }
+    nav button.active { border-bottom-color: #4f46e5; color: #4f46e5; }
+    main { padding: 32px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .section-header h2 { font-size: 1.1rem; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+    th { background: #f9fafb; text-align: left; padding: 12px 16px; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: .88rem; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+    .badge.pending { background: #fef9c3; color: #854d0e; }
+    .badge.accepted { background: #dcfce7; color: #166534; }
+    .badge.expired { background: #f3f4f6; color: #6b7280; }
+    .btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: .82rem; font-weight: 500; }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-secondary { background: #f3f4f6; color: #374151; }
+    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; }
+    .btn-danger:hover { background: #fecaca; }
+    .actions { display: flex; gap: 6px; }
+    .empty { color: #9ca3af; font-size: .9rem; padding: 32px; text-align: center; }
+
+    /* Modal */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 32px; width: 380px; }
+    .modal h3 { margin-bottom: 20px; font-size: 1rem; }
+    .modal label { display: block; font-size: .85rem; font-weight: 500; margin-bottom: 6px; color: #374151; }
+    .modal input { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 7px; font-size: .9rem; margin-bottom: 16px; outline: none; }
+    .modal input:focus { border-color: #4f46e5; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+    .modal-error { color: #dc2626; font-size: .82rem; margin-bottom: 10px; display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My North Admin</h1>
+    <button id="logoutBtn">Sair</button>
+  </header>
+  <nav>
+    <button class="active" data-tab="users">Utilizadores</button>
+    <button data-tab="invites">Convites</button>
+    <button data-tab="connections">Ligações</button>
+    <button data-tab="admins">Administradores</button>
+  </nav>
+  <main>
+    <!-- Users -->
+    <div class="section active" id="tab-users">
+      <div class="section-header"><h2>Utilizadores</h2></div>
+      <table>
+        <thead><tr><th>ID</th><th>Email</th><th>Google ID</th><th>Auth</th><th>Criado em</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="5" class="empty">A carregar…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Invites -->
+    <div class="section" id="tab-invites">
+      <div class="section-header"><h2>Convites</h2></div>
+      <table>
+        <thead><tr><th>ID</th><th>De</th><th>Para (email)</th><th>Estado</th><th>Expira em</th><th>Criado em</th></tr></thead>
+        <tbody id="invites-body"><tr><td colspan="6" class="empty">A carregar…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Connections -->
+    <div class="section" id="tab-connections">
+      <div class="section-header"><h2>Ligações</h2></div>
+      <table>
+        <thead><tr><th>ID</th><th>Utilizador A</th><th>Utilizador B</th><th>Criado em</th></tr></thead>
+        <tbody id="connections-body"><tr><td colspan="4" class="empty">A carregar…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Admins -->
+    <div class="section" id="tab-admins">
+      <div class="section-header">
+        <h2>Administradores</h2>
+        <button class="btn btn-primary" id="addAdminBtn">+ Adicionar</button>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Username</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="admins-body"><tr><td colspan="4" class="empty">A carregar…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Admin modal (create / edit) -->
+  <div class="overlay" id="adminModal">
+    <div class="modal">
+      <h3 id="modalTitle">Novo administrador</h3>
+      <p class="modal-error" id="modalError"></p>
+      <label>Username</label>
+      <input id="modalUsername" type="text" placeholder="username">
+      <label id="modalPasswordLabel">Password</label>
+      <input id="modalPassword" type="password" placeholder="password">
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalCancel">Cancelar</button>
+        <button class="btn btn-primary" id="modalSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fmt = d => new Date(d).toLocaleString('pt-PT');
+
+    // --- Tabs ---
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('tab-' + tab).classList.add('active');
+        loaders[tab]?.();
+      });
+    });
+
+    // --- Logout ---
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/admin/api/logout', { method: 'POST' });
+      window.location.href = '/admin/login';
+    });
+
+    // --- API helpers ---
+    async function api(method, path, body) {
+      const res = await fetch('/admin/api' + path, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (res.status === 401) { window.location.href = '/admin/login'; throw new Error('unauth'); }
+      return res;
+    }
+
+    // --- Users ---
+    async function loadUsers() {
+      const res = await api('GET', '/users');
+      const users = await res.json();
+      const tbody = document.getElementById('users-body');
+      if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem utilizadores.</td></tr>'; return; }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td><code>${u.id}</code></td>
+          <td>${u.email}</td>
+          <td>${u.googleId ? '<code>' + u.googleId + '</code>' : '—'}</td>
+          <td>${u.passwordHash ? 'Password' : ''}${u.passwordHash && u.googleId ? ' + ' : ''}${u.googleId ? 'Google' : ''}</td>
+          <td>${fmt(u.createdAt)}</td>
+        </tr>`).join('');
+    }
+
+    // --- Invites ---
+    async function loadInvites() {
+      const res = await api('GET', '/invites');
+      const invites = await res.json();
+      const tbody = document.getElementById('invites-body');
+      if (!invites.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Sem convites.</td></tr>'; return; }
+      tbody.innerHTML = invites.map(i => `
+        <tr>
+          <td><code>${i.id}</code></td>
+          <td>${i.fromUser.email}</td>
+          <td>${i.toEmail}</td>
+          <td><span class="badge ${i.status}">${i.status}</span></td>
+          <td>${fmt(i.expiresAt)}</td>
+          <td>${fmt(i.createdAt)}</td>
+        </tr>`).join('');
+    }
+
+    // --- Connections ---
+    async function loadConnections() {
+      const res = await api('GET', '/connections');
+      const conns = await res.json();
+      const tbody = document.getElementById('connections-body');
+      if (!conns.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem ligações.</td></tr>'; return; }
+      tbody.innerHTML = conns.map(c => `
+        <tr>
+          <td><code>${c.id}</code></td>
+          <td>${c.userA.email}</td>
+          <td>${c.userB.email}</td>
+          <td>${fmt(c.createdAt)}</td>
+        </tr>`).join('');
+    }
+
+    // --- Admins ---
+    let editingId = null;
+
+    async function loadAdmins() {
+      const res = await api('GET', '/admins');
+      const admins = await res.json();
+      const tbody = document.getElementById('admins-body');
+      if (!admins.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem admins.</td></tr>'; return; }
+      tbody.innerHTML = admins.map(a => `
+        <tr>
+          <td><code>${a.id}</code></td>
+          <td>${a.username}</td>
+          <td>${fmt(a.createdAt)}</td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-secondary" onclick="openEdit('${a.id}','${a.username}')">Editar</button>
+              <button class="btn btn-danger" onclick="deleteAdmin('${a.id}','${a.username}')">Remover</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    function openModal(title, username = '') {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalUsername').value = username;
+      document.getElementById('modalPassword').value = '';
+      document.getElementById('modalError').style.display = 'none';
+      document.getElementById('modalPasswordLabel').textContent = editingId ? 'Nova password (deixar vazio para não alterar)' : 'Password';
+      document.getElementById('adminModal').classList.add('open');
+      document.getElementById('modalUsername').focus();
+    }
+
+    document.getElementById('addAdminBtn').addEventListener('click', () => {
+      editingId = null;
+      openModal('Novo administrador');
+    });
+
+    window.openEdit = (id, username) => {
+      editingId = id;
+      openModal('Editar administrador', username);
+    };
+
+    document.getElementById('modalCancel').addEventListener('click', () => {
+      document.getElementById('adminModal').classList.remove('open');
+    });
+
+    document.getElementById('modalSave').addEventListener('click', async () => {
+      const username = document.getElementById('modalUsername').value.trim();
+      const password = document.getElementById('modalPassword').value;
+      const errEl = document.getElementById('modalError');
+      errEl.style.display = 'none';
+
+      const body = {};
+      if (username) body.username = username;
+      if (password) body.password = password;
+
+      if (!editingId && (!username || !password)) {
+        errEl.textContent = 'Username e password são obrigatórios.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      const res = editingId
+        ? await api('PUT', '/admins/' + editingId, body)
+        : await api('POST', '/admins', body);
+
+      if (res.ok) {
+        document.getElementById('adminModal').classList.remove('open');
+        loadAdmins();
+      } else {
+        const data = await res.json();
+        errEl.textContent = data.error || 'Erro desconhecido.';
+        errEl.style.display = 'block';
+      }
+    });
+
+    window.deleteAdmin = async (id, username) => {
+      if (!confirm(`Remover o admin "${username}"?`)) return;
+      const res = await api('DELETE', '/admins/' + id);
+      if (res.ok) {
+        loadAdmins();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao remover.');
+      }
+    };
+
+    const loaders = { users: loadUsers, invites: loadInvites, connections: loadConnections, admins: loadAdmins };
+
+    // Load initial tab
+    loadUsers();
+  </script>
+</body>
+</html>

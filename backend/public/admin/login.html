@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My North — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 40px;
+      width: 360px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.1);
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; color: #111; }
+    p.sub { color: #666; font-size: .875rem; margin-bottom: 28px; }
+    label { display: block; font-size: .85rem; font-weight: 500; color: #333; margin-bottom: 6px; }
+    input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: .95rem;
+      outline: none;
+      margin-bottom: 18px;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: #4f46e5; }
+    button {
+      width: 100%;
+      padding: 11px;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    button:hover { background: #4338ca; }
+    .error {
+      color: #dc2626;
+      font-size: .85rem;
+      margin-top: 14px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>My North Admin</h1>
+    <p class="sub">Acesso restrito a administradores.</p>
+    <form id="form">
+      <label for="username">Utilizador</label>
+      <input id="username" type="text" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
+      <p class="error" id="err">Credenciais inválidas.</p>
+    </form>
+  </div>
+  <script>
+    document.getElementById('form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('err');
+      err.style.display = 'none';
+      const res = await fetch('/admin/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value,
+        }),
+      });
+      if (res.ok) {
+        window.location.href = '/admin';
+      } else {
+        err.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
