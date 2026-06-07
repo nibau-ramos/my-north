@@ -13,5 +13,8 @@ fi
 export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null)
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 
+# Forward backend port so the device can reach localhost:3000 on the Mac
+adb reverse tcp:3000 tcp:3000
+
 echo "Launching MyNorth on Android..."
 npx react-native run-android
