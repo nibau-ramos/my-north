@@ -108,7 +108,7 @@
     <div class="section active" id="tab-users">
       <div class="section-header"><h2>Utilizadores</h2></div>
       <table>
-        <thead><tr><th>ID</th><th>Email</th><th>Google ID</th><th>Auth</th><th>Criado em</th></tr></thead>
+        <thead><tr><th>Email</th><th>ID</th><th>Google ID</th><th>Auth</th><th>Criado em</th></tr></thead>
         <tbody id="users-body"><tr><td colspan="5" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
@@ -117,7 +117,7 @@
     <div class="section" id="tab-invites">
       <div class="section-header"><h2>Convites</h2></div>
       <table>
-        <thead><tr><th>ID</th><th>De</th><th>Para (email)</th><th>Estado</th><th>Expira em</th><th>Criado em</th></tr></thead>
+        <thead><tr><th>De</th><th>Para (email)</th><th>ID</th><th>Estado</th><th>Expira em</th><th>Criado em</th></tr></thead>
         <tbody id="invites-body"><tr><td colspan="6" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
@@ -138,8 +138,8 @@
         <button class="btn btn-primary" id="addAdminBtn">+ Adicionar</button>
       </div>
       <table>
-        <thead><tr><th>ID</th><th>Username</th><th>Criado em</th><th>Ações</th></tr></thead>
-        <tbody id="admins-body"><tr><td colspan="4" class="empty">A carregar…</td></tr></tbody>
+        <thead><tr><th>Administrador</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="admins-body"><tr><td colspan="3" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
   </main>
@@ -200,8 +200,8 @@
       if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem utilizadores.</td></tr>'; return; }
       tbody.innerHTML = users.map(u => `
         <tr>
-          <td><code>${u.id}</code></td>
           <td>${u.email}</td>
+          <td><code>${u.id}</code></td>
           <td>${u.googleId ? '<code>' + u.googleId + '</code>' : '—'}</td>
           <td>${u.passwordHash ? 'Password' : ''}${u.passwordHash && u.googleId ? ' + ' : ''}${u.googleId ? 'Google' : ''}</td>
           <td>${fmt(u.createdAt)}</td>
@@ -216,9 +216,9 @@
       if (!invites.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Sem convites.</td></tr>'; return; }
       tbody.innerHTML = invites.map(i => `
         <tr>
-          <td><code>${i.id}</code></td>
           <td>${i.fromUser.email}</td>
           <td>${i.toEmail}</td>
+          <td><code>${i.id}</code></td>
           <td><span class="badge ${i.status}">${i.status}</span></td>
           <td>${fmt(i.expiresAt)}</td>
           <td>${fmt(i.createdAt)}</td>
@@ -250,8 +250,7 @@
       if (!admins.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem admins.</td></tr>'; return; }
       tbody.innerHTML = admins.map(a => `
         <tr>
-          <td><code>${a.id}</code></td>
-          <td>${a.username}</td>
+          <td>${a.username} <span style="font-size:.78rem;color:#9ca3af">(${a.id})</span></td>
           <td>${fmt(a.createdAt)}</td>
           <td>
             <div class="actions">
