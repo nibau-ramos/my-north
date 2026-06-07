@@ -257,7 +257,7 @@
           <td>
             <div class="actions">
               <button class="btn btn-secondary" onclick="openEdit('${a.id}','${a.username}')">Editar</button>
-              <button class="btn btn-danger" onclick="deleteAdmin('${a.id}','${a.username}')">Remover</button>
+              ${a.id !== currentAdminId ? `<button class="btn btn-danger" onclick="deleteAdmin('${a.id}','${a.username}')">Remover</button>` : ''}
             </div>
           </td>
         </tr>`).join('');
@@ -359,8 +359,9 @@
 
     const loaders = { users: loadUsers, invites: loadInvites, connections: loadConnections, admins: loadAdmins };
 
-    // Load initial tab
-    loadUsers();
+    // Load current admin ID then initial tab
+    let currentAdminId = null;
+    api('GET', '/me').then(r => r.json()).then(d => { currentAdminId = d.id; loadUsers(); });
   </script>
 </body>
 </html>

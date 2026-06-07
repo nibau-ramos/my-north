@@ -35,6 +35,7 @@ router.post('/api/login', adminController.login);
 router.post('/api/logout', adminController.logout);
 
 // Protected API
+router.get('/api/me', requireAdmin, adminController.getMe);
 router.get('/api/users', requireAdmin, adminController.getUsers);
 router.delete('/api/users/:id', requireAdmin, adminController.deleteUser);
 router.get('/api/invites', requireAdmin, adminController.getInvites);

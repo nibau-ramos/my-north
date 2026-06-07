@@ -39,6 +39,10 @@ export function logout(_req: Request, res: Response): void {
   res.json({ ok: true });
 }
 
+export function getMe(req: AdminRequest, res: Response): void {
+  res.json({ id: req.admin!.sub });
+}
+
 export async function getUsers(_req: AdminRequest, res: Response): Promise<void> {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
   res.json(users);
