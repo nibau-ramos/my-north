@@ -1,14 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BASE_URL } from '../services/api';
 
 export default function DevBanner() {
   if (!__DEV__) return null;
   const { bottom } = useSafeAreaInsets();
+  const label = Platform.OS === 'android'
+    ? `DEV · ${BASE_URL} (adb reverse)`
+    : `DEV · ${BASE_URL}`;
   return (
     <View style={[styles.bar, { paddingBottom: bottom + 4 }]}>
-      <Text style={styles.text}>DEV · {BASE_URL}</Text>
+      <Text style={styles.text}>{label}</Text>
     </View>
   );
 }
