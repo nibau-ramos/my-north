@@ -164,6 +164,10 @@ export async function deleteConnection(req: AdminRequest, res: Response): Promis
 
 export async function deleteAdmin(req: AdminRequest, res: Response): Promise<void> {
   const { id } = req.params;
+  if (id === req.admin?.sub) {
+    res.status(400).json({ error: 'Cannot delete your own account' });
+    return;
+  }
   const count = await prisma.admin.count();
   if (count <= 1) {
     res.status(400).json({ error: 'Cannot delete the last admin' });

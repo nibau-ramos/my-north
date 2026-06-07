@@ -270,7 +270,8 @@
       document.getElementById('modalPasswordConfirm').value = '';
       document.getElementById('modalError').style.display = 'none';
       document.getElementById('modalPasswordLabel').textContent = editingId ? 'Nova password (deixar vazio para não alterar)' : 'Password';
-      document.getElementById('modalConfirmWrap').style.display = editingId ? 'none' : 'block';
+      document.getElementById('modalConfirmWrap').querySelector('label').textContent = editingId ? 'Confirmar nova password' : 'Confirmar password';
+      document.getElementById('modalConfirmWrap').style.display = 'block';
       document.getElementById('adminModal').classList.add('open');
       document.getElementById('modalUsername').focus();
     }
@@ -299,18 +300,18 @@
       if (username) body.username = username;
       if (password) body.password = password;
 
+      const confirm = document.getElementById('modalPasswordConfirm').value;
       if (!editingId) {
-        const confirm = document.getElementById('modalPasswordConfirm').value;
         if (!username || !password) {
           errEl.textContent = 'Username e password são obrigatórios.';
           errEl.style.display = 'block';
           return;
         }
-        if (password !== confirm) {
-          errEl.textContent = 'As passwords não coincidem.';
-          errEl.style.display = 'block';
-          return;
-        }
+      }
+      if (password && password !== confirm) {
+        errEl.textContent = 'As passwords não coincidem.';
+        errEl.style.display = 'block';
+        return;
       }
 
       const res = editingId
