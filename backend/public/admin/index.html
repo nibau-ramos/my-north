@@ -108,8 +108,8 @@
     <div class="section active" id="tab-users">
       <div class="section-header"><h2>Utilizadores</h2></div>
       <table>
-        <thead><tr><th>Email</th><th>ID</th><th>Google ID</th><th>Auth</th><th>Criado em</th></tr></thead>
-        <tbody id="users-body"><tr><td colspan="5" class="empty">A carregar…</td></tr></tbody>
+        <thead><tr><th>Email</th><th>Google ID</th><th>Auth</th><th>Criado em</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="4" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
 
@@ -197,11 +197,10 @@
       const res = await api('GET', '/users');
       const users = await res.json();
       const tbody = document.getElementById('users-body');
-      if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem utilizadores.</td></tr>'; return; }
+      if (!users.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem utilizadores.</td></tr>'; return; }
       tbody.innerHTML = users.map(u => `
         <tr>
-          <td>${u.email}</td>
-          <td><code>${u.id}</code></td>
+          <td>${u.email} <span style="font-size:.78rem;color:#9ca3af">(${u.id})</span></td>
           <td>${u.googleId ? '<code>' + u.googleId + '</code>' : '—'}</td>
           <td>${u.passwordHash ? 'Password' : ''}${u.passwordHash && u.googleId ? ' + ' : ''}${u.googleId ? 'Google' : ''}</td>
           <td>${fmt(u.createdAt)}</td>
