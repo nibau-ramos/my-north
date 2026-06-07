@@ -52,7 +52,8 @@
       color: #dc2626;
       font-size: .85rem;
       margin-top: 14px;
-      display: none;
+      visibility: hidden;
+      min-height: 1.2em;
     }
   </style>
 </head>
@@ -73,7 +74,7 @@
     document.getElementById('form').addEventListener('submit', async e => {
       e.preventDefault();
       const err = document.getElementById('err');
-      err.style.display = 'none';
+      err.style.visibility = 'hidden';
       const res = await fetch('/admin/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +86,7 @@
       if (res.ok) {
         window.location.href = '/admin';
       } else {
-        err.style.display = 'block';
+        err.style.visibility = 'visible';
       }
     });
   </script>

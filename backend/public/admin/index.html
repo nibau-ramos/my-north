@@ -107,24 +107,24 @@
     <!-- Users -->
     <div class="section active" id="tab-users">
       <table>
-        <thead><tr><th>Email</th><th>Google ID</th><th>Auth</th><th>Criado em</th></tr></thead>
-        <tbody id="users-body"><tr><td colspan="4" class="empty">A carregar…</td></tr></tbody>
+        <thead><tr><th>Email</th><th>Google ID</th><th>Auth</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="5" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
 
     <!-- Invites -->
     <div class="section" id="tab-invites">
       <table>
-        <thead><tr><th>De</th><th>Para (email)</th><th>ID</th><th>Estado</th><th>Expira em</th><th>Criado em</th></tr></thead>
-        <tbody id="invites-body"><tr><td colspan="6" class="empty">A carregar…</td></tr></tbody>
+        <thead><tr><th>De</th><th>Para (email)</th><th>ID</th><th>Estado</th><th>Expira em</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="invites-body"><tr><td colspan="7" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
 
     <!-- Connections -->
     <div class="section" id="tab-connections">
       <table>
-        <thead><tr><th>ID</th><th>Utilizador A</th><th>Utilizador B</th><th>Criado em</th></tr></thead>
-        <tbody id="connections-body"><tr><td colspan="4" class="empty">A carregar…</td></tr></tbody>
+        <thead><tr><th>ID</th><th>Utilizador A</th><th>Utilizador B</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="connections-body"><tr><td colspan="5" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
 
@@ -149,6 +149,10 @@
       <input id="modalUsername" type="text" placeholder="username">
       <label id="modalPasswordLabel">Password</label>
       <input id="modalPassword" type="password" placeholder="password">
+      <div id="modalConfirmWrap">
+        <label>Confirmar password</label>
+        <input id="modalPasswordConfirm" type="password" placeholder="repetir password">
+      </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="modalCancel">Cancelar</button>
         <button class="btn btn-primary" id="modalSave">Guardar</button>
@@ -193,13 +197,14 @@
       const res = await api('GET', '/users');
       const users = await res.json();
       const tbody = document.getElementById('users-body');
-      if (!users.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem utilizadores.</td></tr>'; return; }
+      if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem utilizadores.</td></tr>'; return; }
       tbody.innerHTML = users.map(u => `
         <tr>
           <td>${u.email} <span style="font-size:.78rem;color:#9ca3af">(${u.id})</span></td>
           <td>${u.googleId ? '<code>' + u.googleId + '</code>' : '—'}</td>
           <td>${u.passwordHash ? 'Password' : ''}${u.passwordHash && u.googleId ? ' + ' : ''}${u.googleId ? 'Google' : ''}</td>
           <td>${fmt(u.createdAt)}</td>
+          <td><button class="btn btn-danger" onclick="deleteUser('${u.id}','${u.email}')">Remover</button></td>
         </tr>`).join('');
     }
 
@@ -208,7 +213,7 @@
       const res = await api('GET', '/invites');
       const invites = await res.json();
       const tbody = document.getElementById('invites-body');
-      if (!invites.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Sem convites.</td></tr>'; return; }
+      if (!invites.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Sem convites.</td></tr>'; return; }
       tbody.innerHTML = invites.map(i => `
         <tr>
           <td>${i.fromUser.email}</td>
@@ -217,6 +222,7 @@
           <td><span class="badge ${i.status}">${i.status}</span></td>
           <td>${fmt(i.expiresAt)}</td>
           <td>${fmt(i.createdAt)}</td>
+          <td><button class="btn btn-danger" onclick="deleteInvite('${i.id}')">Remover</button></td>
         </tr>`).join('');
     }
 
@@ -225,13 +231,14 @@
       const res = await api('GET', '/connections');
       const conns = await res.json();
       const tbody = document.getElementById('connections-body');
-      if (!conns.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem ligações.</td></tr>'; return; }
+      if (!conns.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem ligações.</td></tr>'; return; }
       tbody.innerHTML = conns.map(c => `
         <tr>
           <td><code>${c.id}</code></td>
           <td>${c.userA.email}</td>
           <td>${c.userB.email}</td>
           <td>${fmt(c.createdAt)}</td>
+          <td><button class="btn btn-danger" onclick="deleteConnection('${c.id}')">Remover</button></td>
         </tr>`).join('');
     }
 
@@ -260,8 +267,10 @@
       document.getElementById('modalTitle').textContent = title;
       document.getElementById('modalUsername').value = username;
       document.getElementById('modalPassword').value = '';
+      document.getElementById('modalPasswordConfirm').value = '';
       document.getElementById('modalError').style.display = 'none';
       document.getElementById('modalPasswordLabel').textContent = editingId ? 'Nova password (deixar vazio para não alterar)' : 'Password';
+      document.getElementById('modalConfirmWrap').style.display = editingId ? 'none' : 'block';
       document.getElementById('adminModal').classList.add('open');
       document.getElementById('modalUsername').focus();
     }
@@ -290,10 +299,18 @@
       if (username) body.username = username;
       if (password) body.password = password;
 
-      if (!editingId && (!username || !password)) {
-        errEl.textContent = 'Username e password são obrigatórios.';
-        errEl.style.display = 'block';
-        return;
+      if (!editingId) {
+        const confirm = document.getElementById('modalPasswordConfirm').value;
+        if (!username || !password) {
+          errEl.textContent = 'Username e password são obrigatórios.';
+          errEl.style.display = 'block';
+          return;
+        }
+        if (password !== confirm) {
+          errEl.textContent = 'As passwords não coincidem.';
+          errEl.style.display = 'block';
+          return;
+        }
       }
 
       const res = editingId
@@ -309,6 +326,24 @@
         errEl.style.display = 'block';
       }
     });
+
+    window.deleteUser = async (id, email) => {
+      if (!confirm(`Remover o utilizador "${email}"? Esta ação é irreversível.`)) return;
+      const res = await api('DELETE', '/users/' + id);
+      if (res.ok) { loadUsers(); } else { const d = await res.json(); alert(d.error || 'Erro ao remover.'); }
+    };
+
+    window.deleteInvite = async (id) => {
+      if (!confirm('Remover este convite?')) return;
+      const res = await api('DELETE', '/invites/' + id);
+      if (res.ok) { loadInvites(); } else { const d = await res.json(); alert(d.error || 'Erro ao remover.'); }
+    };
+
+    window.deleteConnection = async (id) => {
+      if (!confirm('Remover esta ligação?')) return;
+      const res = await api('DELETE', '/connections/' + id);
+      if (res.ok) { loadConnections(); } else { const d = await res.json(); alert(d.error || 'Erro ao remover.'); }
+    };
 
     window.deleteAdmin = async (id, username) => {
       if (!confirm(`Remover o admin "${username}"?`)) return;

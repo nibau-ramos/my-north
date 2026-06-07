@@ -132,6 +132,36 @@ export async function updateAdmin(req: AdminRequest, res: Response): Promise<voi
   }
 }
 
+export async function deleteUser(req: AdminRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    await prisma.user.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: 'User not found' });
+  }
+}
+
+export async function deleteInvite(req: AdminRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    await prisma.invite.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: 'Invite not found' });
+  }
+}
+
+export async function deleteConnection(req: AdminRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    await prisma.connection.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: 'Connection not found' });
+  }
+}
+
 export async function deleteAdmin(req: AdminRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const count = await prisma.admin.count();

@@ -36,8 +36,11 @@ router.post('/api/logout', adminController.logout);
 
 // Protected API
 router.get('/api/users', requireAdmin, adminController.getUsers);
+router.delete('/api/users/:id', requireAdmin, adminController.deleteUser);
 router.get('/api/invites', requireAdmin, adminController.getInvites);
+router.delete('/api/invites/:id', requireAdmin, adminController.deleteInvite);
 router.get('/api/connections', requireAdmin, adminController.getConnections);
+router.delete('/api/connections/:id', requireAdmin, adminController.deleteConnection);
 router.get('/api/admins', requireAdmin, adminController.getAdmins);
 router.post('/api/admins', requireAdmin, adminController.createAdmin);
 router.put('/api/admins/:id', requireAdmin, adminController.updateAdmin);
