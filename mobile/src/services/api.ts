@@ -2,14 +2,14 @@ import axios from 'axios';
 import { Platform, TurboModuleRegistry } from 'react-native';
 
 function getDevBaseUrl(): string {
-  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
   try {
     const SourceCode = TurboModuleRegistry.get<{ getConstants(): { scriptURL?: string } }>('SourceCode');
     const scriptURL = SourceCode?.getConstants()?.scriptURL;
     const match = scriptURL?.match(/^https?:\/\/([^:/]+)/);
     if (match) return `http://${match[1]}:3000`;
   } catch {}
-  return 'http://localhost:3000';
+  // Fallback: emulator host on Android, localhost elsewhere
+  return Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 }
 
 export const BASE_URL = __DEV__ ? getDevBaseUrl() : 'https://api.mynorth.app';
