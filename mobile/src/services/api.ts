@@ -12,7 +12,7 @@ function getDevBaseUrl(): string {
   return 'http://localhost:3000';
 }
 
-const BASE_URL = __DEV__ ? getDevBaseUrl() : 'https://api.mynorth.app';
+export const BASE_URL = __DEV__ ? getDevBaseUrl() : 'https://api.mynorth.app';
 
 const api = axios.create({ baseURL: BASE_URL });
 
