@@ -387,7 +387,7 @@ export default function MapScreen() {
           provider={PROVIDER_GOOGLE}
           style={StyleSheet.absoluteFill}
           initialCamera={{ center: { latitude: 20, longitude: 0 }, heading: initialHeading, pitch: 0, zoom: 2 }}
-          showsUserLocation={Platform.OS === 'ios'}
+          showsUserLocation
           onUserLocationChange={onUserLocationChange}
           showsMyLocationButton={false}
           showsCompass={false}
@@ -415,13 +415,6 @@ export default function MapScreen() {
             <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.destinationMarker}>
                 <Text style={styles.destinationEmoji}>❤️</Text>
-              </View>
-            </Marker>
-          )}
-          {Platform.OS === 'android' && userPos && (
-            <Marker coordinate={userPos} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.userDotOuter}>
-                <View style={styles.userDotInner} />
               </View>
             </Marker>
           )}
@@ -596,22 +589,6 @@ const styles = StyleSheet.create({
   },
   kissEmoji: {
     fontSize: 26,
-  },
-  userDotOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(66,133,244,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userDotInner: {
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    backgroundColor: '#4285F4',
-    borderWidth: 2,
-    borderColor: '#fff',
   },
   destinationMarker: {
     width: 38,
