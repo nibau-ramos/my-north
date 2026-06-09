@@ -18,12 +18,22 @@ export async function getStatus(req: AuthRequest, res: Response) {
     return res.json({ status: 'linked', partnerEmail: partner.email });
   }
 
-  const invite = await prisma.invite.findFirst({
+  // Incoming invite takes priority over outgoing — it requires a response
+  const incomingInvite = await prisma.invite.findFirst({
+    where: { toEmail: myEmail.toLowerCase(), expiresAt: { gt: new Date() } },
+    include: { fromUser: true },
+  });
+
+  if (incomingInvite) {
+    return res.json({ status: 'invited', fromEmail: incomingInvite.fromUser.email });
+  }
+
+  const outgoingInvite = await prisma.invite.findFirst({
     where: { fromUserId: userId, expiresAt: { gt: new Date() } },
   });
 
-  if (invite) {
-    return res.json({ status: 'pending', invitedEmail: invite.toEmail, expiresAt: invite.expiresAt });
+  if (outgoingInvite) {
+    return res.json({ status: 'pending', invitedEmail: outgoingInvite.toEmail, expiresAt: outgoingInvite.expiresAt });
   }
 
   const brokenConnection = await prisma.connection.findFirst({
@@ -63,11 +73,9 @@ export async function sendInvite(req: AuthRequest, res: Response) {
   });
 
   if (mutual && mutual.fromUser.email.toLowerCase() === targetEmail) {
-    // userA = who sent the first invite (the initiator), userB = who accepted (current user)
     const inviterUserId = mutual.fromUserId;
     const invitedUserId = userId;
 
-    // Clean up any previous cancelled connection between this pair in either direction
     await prisma.connection.deleteMany({
       where: {
         OR: [
@@ -84,6 +92,51 @@ export async function sendInvite(req: AuthRequest, res: Response) {
   }
 
   return res.json({ status: 'pending', invitedEmail: targetEmail, expiresAt });
+}
+
+export async function acceptInvite(req: AuthRequest, res: Response) {
+  const userId = req.user!.sub;
+  const myEmail = req.user!.email;
+
+  const invite = await prisma.invite.findFirst({
+    where: { toEmail: myEmail.toLowerCase(), expiresAt: { gt: new Date() } },
+    include: { fromUser: true },
+  });
+
+  if (!invite) return res.status(404).json({ error: 'No pending invite found' });
+
+  const inviterUserId = invite.fromUserId;
+  const invitedUserId = userId;
+
+  await prisma.connection.deleteMany({
+    where: {
+      OR: [
+        { userAId: inviterUserId, userBId: invitedUserId },
+        { userAId: invitedUserId, userBId: inviterUserId },
+      ],
+    },
+  });
+
+  await prisma.connection.create({ data: { userAId: inviterUserId, userBId: invitedUserId, acceptedAt: new Date() } });
+
+  await prisma.invite.delete({ where: { id: invite.id } });
+  // Also clean up any outgoing invite from the accepted user
+  await prisma.invite.deleteMany({ where: { fromUserId: userId } });
+
+  return res.json({ status: 'linked', partnerEmail: invite.fromUser.email });
+}
+
+export async function rejectInvite(req: AuthRequest, res: Response) {
+  const userId = req.user!.sub;
+  const myEmail = req.user!.email;
+
+  await prisma.invite.deleteMany({ where: { toEmail: myEmail.toLowerCase() } });
+
+  const brokenConnection = await prisma.connection.findFirst({
+    where: { OR: [{ userAId: userId }, { userBId: userId }], cancelledAt: { not: null } },
+  });
+
+  return res.json({ status: brokenConnection ? 'broken' : 'free' });
 }
 
 export async function cancelInvite(req: AuthRequest, res: Response) {

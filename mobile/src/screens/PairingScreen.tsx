@@ -57,6 +57,33 @@ export default function PairingScreen() {
     }
   }
 
+  async function handleAcceptInvite() {
+    setError('');
+    setLoading(true);
+    try {
+      const s = await pairingService.acceptInvite();
+      setStatus(s);
+      if (s.status === 'linked') onLinked();
+    } catch (e: any) {
+      setError(e?.response?.data?.error ?? 'Não foi possível aceitar o convite.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRejectInvite() {
+    setError('');
+    setLoading(true);
+    try {
+      const s = await pairingService.rejectInvite();
+      setStatus(s);
+    } catch {
+      setError('Não foi possível rejeitar o convite.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleCancel() {
     setError('');
     setLoading(true);
@@ -160,6 +187,35 @@ export default function PairingScreen() {
               <ActivityIndicator color="#ff4d6d" />
             ) : (
               <Text style={styles.buttonText}>Nova Ligação</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+
+      {/* Convite recebido */}
+      {status?.status === 'invited' && (
+        <View style={styles.section}>
+          <View style={styles.inviteBadge}>
+            <Text style={styles.inviteBadgeEmoji}>💌</Text>
+            <Text style={styles.inviteBadgeText}>Tens um convite!</Text>
+          </View>
+          <Text style={styles.inviteBody}>
+            Recebeste um pedido de ligação de:
+          </Text>
+          <Text style={styles.inviteEmail}>{status.fromEmail}</Text>
+          <Text style={styles.inviteQuestion}>Queres aceitar esta ligação?</Text>
+          <Pressable style={styles.buttonAccept} onPress={handleAcceptInvite} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonAcceptText}>Aceitar</Text>
+            )}
+          </Pressable>
+          <Pressable style={[styles.button, styles.buttonOutline, styles.buttonReject]} onPress={handleRejectInvite} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#ff4d6d" />
+            ) : (
+              <Text style={styles.buttonText}>Rejeitar</Text>
             )}
           </Pressable>
         </View>
@@ -330,6 +386,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
+  },
+  inviteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 8,
+  },
+  inviteBadgeEmoji: {
+    fontSize: 28,
+  },
+  inviteBadgeText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ff4d6d',
+  },
+  inviteBody: {
+    fontSize: 15,
+    color: '#888',
+    marginBottom: 8,
+  },
+  inviteEmail: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 20,
+  },
+  inviteQuestion: {
+    fontSize: 15,
+    color: '#555',
+    marginBottom: 20,
+  },
+  buttonAccept: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#ff4d6d',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  buttonAcceptText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  buttonReject: {
+    marginTop: 0,
   },
   error: {
     color: '#e53935',
