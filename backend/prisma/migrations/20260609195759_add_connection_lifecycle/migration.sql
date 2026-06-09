@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Connection" ADD COLUMN     "acceptedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "cancelledAt" TIMESTAMP(3);

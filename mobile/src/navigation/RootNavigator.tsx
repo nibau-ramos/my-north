@@ -6,6 +6,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import MapScreen from '../screens/MapScreen';
 import PairingScreen from '../screens/PairingScreen';
+import AccountScreen from '../screens/AccountScreen';
 import * as pairingService from '../services/pairingService';
 
 export type AuthStackParamList = {
@@ -16,6 +17,7 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   Map: undefined;
   Pairing: undefined;
+  Account: undefined;
 };
 
 type PairingGateContextType = {
@@ -83,6 +85,7 @@ export default function RootNavigator() {
       <LinkedStack.Navigator screenOptions={{ headerShown: false }}>
         <LinkedStack.Screen name="Map" component={MapScreen} />
         <LinkedStack.Screen name="Pairing" component={PairingScreen} />
+        <LinkedStack.Screen name="Account" component={AccountScreen} />
       </LinkedStack.Navigator>
     </PairingGateContext.Provider>
   );

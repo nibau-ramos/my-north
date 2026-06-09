@@ -35,7 +35,7 @@ export default function PairingScreen() {
       const s = await pairingService.getStatus();
       setStatus(s);
     } catch {
-      setError('Failed to load status.');
+      setError('Não foi possível carregar o estado.');
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function PairingScreen() {
       setEmail('');
       if (s.status === 'linked') onLinked();
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Failed to send invite.');
+      setError(e?.response?.data?.error ?? 'Não foi possível enviar o convite.');
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function PairingScreen() {
       const s = await pairingService.cancelInvite();
       setStatus(s);
     } catch {
-      setError('Failed to cancel invite.');
+      setError('Não foi possível cancelar o convite.');
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function PairingScreen() {
       setStatus(s);
       onUnlinked();
     } catch {
-      setError('Failed to disconnect.');
+      setError('Não foi possível desligar.');
     } finally {
       setLoading(false);
     }
@@ -98,23 +98,26 @@ export default function PairingScreen() {
     >
       {canGoBack && (
         <Pressable style={styles.back} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>← Voltar</Text>
         </Pressable>
       )}
 
-      <Text style={[styles.title, !canGoBack && styles.titleGate]}>Connection</Text>
+      <Text style={[styles.title, !canGoBack && styles.titleGate]}>Conexão</Text>
 
       {loading && !status ? (
         <ActivityIndicator color="#ff4d6d" size="large" />
       ) : null}
 
+      {/* Cenário A: utilizador novo, sem ligação prévia */}
       {status?.status === 'free' && (
         <View style={styles.section}>
-          <Text style={styles.subtitle}>Connect with someone</Text>
-          <Text style={styles.hint}>Enter their email address to send a connection invite.</Text>
+          <Text style={styles.welcomeText}>
+            Bem-vindo à nossa aplicação! Para começares a utilizar todas as funcionalidades, precisas de te conectar a outra pessoa. Atualmente, ainda não tens nenhuma ligação estabelecida.
+          </Text>
+          <Text style={styles.subtitle}>Queres procurar alguém para se conectar contigo?</Text>
           <TextInput
             style={styles.input}
-            placeholder="Their email address"
+            placeholder="Email da outra pessoa"
             placeholderTextColor="#aaa"
             value={email}
             onChangeText={setEmail}
@@ -126,7 +129,37 @@ export default function PairingScreen() {
             {loading ? (
               <ActivityIndicator color="#ff4d6d" />
             ) : (
-              <Text style={styles.buttonText}>Connect</Text>
+              <Text style={styles.buttonText}>Conectar</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+
+      {/* Cenário B: ligação anterior quebrada */}
+      {status?.status === 'broken' && (
+        <View style={styles.section}>
+          <View style={styles.brokenBadge}>
+            <View style={[styles.dot, styles.dotRed]} />
+            <Text style={styles.brokenBadgeText}>Ligação terminada</Text>
+          </View>
+          <Text style={styles.brokenText}>
+            Lamentavelmente, a tua conexão já não está ativa, por isso vais ter que voltar a registar uma nova ligação com outra pessoa ou com a mesma pessoa para que possas continuar a usar o software.
+          </Text>
+          <TextInput
+            style={[styles.input, styles.inputSpaced]}
+            placeholder="Email da outra pessoa"
+            placeholderTextColor="#aaa"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Pressable style={styles.button} onPress={handleConnect} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#ff4d6d" />
+            ) : (
+              <Text style={styles.buttonText}>Nova Ligação</Text>
             )}
           </Pressable>
         </View>
@@ -136,17 +169,17 @@ export default function PairingScreen() {
         <View style={styles.section}>
           <View style={styles.statusBadge}>
             <View style={[styles.dot, styles.dotOrange]} />
-            <Text style={styles.statusText}>Waiting for them to connect back</Text>
+            <Text style={styles.statusText}>A aguardar resposta</Text>
           </View>
           <Text style={styles.emailText}>{status.invitedEmail}</Text>
           <Text style={styles.hint}>
-            Invite expires in {daysUntil(status.expiresAt)} day{daysUntil(status.expiresAt) !== 1 ? 's' : ''}
+            O convite expira em {daysUntil(status.expiresAt)} dia{daysUntil(status.expiresAt) !== 1 ? 's' : ''}
           </Text>
           <Pressable style={[styles.button, styles.buttonOutline]} onPress={handleCancel} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#ff4d6d" />
             ) : (
-              <Text style={styles.buttonText}>Cancel Invite</Text>
+              <Text style={styles.buttonText}>Cancelar Convite</Text>
             )}
           </Pressable>
         </View>
@@ -156,14 +189,14 @@ export default function PairingScreen() {
         <View style={styles.section}>
           <View style={styles.statusBadge}>
             <View style={[styles.dot, styles.dotGreen]} />
-            <Text style={styles.statusText}>Connected</Text>
+            <Text style={styles.statusText}>Conectado</Text>
           </View>
           <Text style={styles.emailText}>{status.partnerEmail}</Text>
           <Pressable style={[styles.button, styles.buttonOutline]} onPress={handleDisconnect} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#ff4d6d" />
             ) : (
-              <Text style={styles.buttonText}>Disconnect</Text>
+              <Text style={styles.buttonText}>Desligar</Text>
             )}
           </Pressable>
         </View>
@@ -202,11 +235,36 @@ const styles = StyleSheet.create({
   section: {
     width: '100%',
   },
+  welcomeText: {
+    fontSize: 15,
+    color: '#555',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  brokenBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  brokenBadgeText: {
+    fontSize: 15,
+    color: '#e53935',
+    fontWeight: '600',
+  },
+  brokenText: {
+    fontSize: 15,
+    color: '#555',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  inputSpaced: {
+    marginTop: 4,
+  },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   hint: {
     fontSize: 14,
@@ -258,6 +316,9 @@ const styles = StyleSheet.create({
   },
   dotGreen: {
     backgroundColor: '#22c55e',
+  },
+  dotRed: {
+    backgroundColor: '#e53935',
   },
   statusText: {
     fontSize: 16,

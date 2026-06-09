@@ -11,6 +11,10 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getProvider(user: { googleId: string | null }): 'google' | 'email' {
+  return user.googleId ? 'google' : 'email';
+}
+
 export async function register(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body;
 
@@ -37,7 +41,7 @@ export async function register(req: Request, res: Response): Promise<void> {
   const user = await prisma.user.create({ data: { email, passwordHash } });
   const token = signToken({ sub: user.id, email: user.email });
 
-  res.status(201).json({ token, user: { id: user.id, email: user.email } });
+  res.status(201).json({ token, user: { id: user.id, email: user.email, provider: getProvider(user) } });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
@@ -61,7 +65,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 
   const token = signToken({ sub: user.id, email: user.email });
-  res.json({ token, user: { id: user.id, email: user.email } });
+  res.json({ token, user: { id: user.id, email: user.email, provider: getProvider(user) } });
 }
 
 export async function googleAuth(req: Request, res: Response): Promise<void> {
@@ -81,9 +85,57 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   });
 
   const token = signToken({ sub: user.id, email: user.email });
-  res.json({ token, user: { id: user.id, email: user.email } });
+  res.json({ token, user: { id: user.id, email: user.email, provider: getProvider(user) } });
 }
 
-export function me(req: AuthRequest, res: Response): void {
-  res.json({ user: { id: req.user!.sub, email: req.user!.email } });
+export async function me(req: AuthRequest, res: Response): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: req.user!.sub } });
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  res.json({ user: { id: user.id, email: user.email, provider: getProvider(user) } });
+}
+
+export async function changePassword(req: AuthRequest, res: Response): Promise<void> {
+  const userId = req.user!.sub;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: 'currentPassword and newPassword are required' });
+    return;
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 8) {
+    res.status(400).json({ error: 'New password must be at least 8 characters' });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.passwordHash) {
+    res.status(400).json({ error: 'Password change is not available for this account type' });
+    return;
+  }
+
+  const valid = await comparePassword(currentPassword, user.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: 'Current password is incorrect' });
+    return;
+  }
+
+  const newHash = await hashPassword(newPassword);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+
+  res.json({ success: true });
+}
+
+export async function deleteAccount(req: AuthRequest, res: Response): Promise<void> {
+  const userId = req.user!.sub;
+
+  await prisma.invite.deleteMany({ where: { fromUserId: userId } });
+  await prisma.connection.deleteMany({
+    where: { OR: [{ userAId: userId }, { userBId: userId }] },
+  });
+  await prisma.user.delete({ where: { id: userId } });
+
+  res.json({ success: true });
 }

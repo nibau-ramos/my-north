@@ -2,6 +2,7 @@ import api from './api';
 
 export type PairingStatus =
   | { status: 'free' }
+  | { status: 'broken' }
   | { status: 'pending'; invitedEmail: string; expiresAt: string }
   | { status: 'linked'; partnerEmail: string };
 

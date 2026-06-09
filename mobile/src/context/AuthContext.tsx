@@ -1,12 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMe } from '../services/authService';
+import type { UserProvider } from '../services/authService';
 
 const TOKEN_KEY = '@mynorth_token';
 
 interface User {
   id: string;
   email: string;
+  provider: UserProvider;
 }
 
 type AuthState =

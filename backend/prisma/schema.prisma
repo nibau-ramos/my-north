@@ -29,12 +29,14 @@ model Invite {
 }
 
 model Connection {
-  id        String   @id @default(cuid())
-  userAId   String
-  userBId   String
-  createdAt DateTime @default(now())
-  userA     User     @relation("ConnectionA", fields: [userAId], references: [id])
-  userB     User     @relation("ConnectionB", fields: [userBId], references: [id])
+  id          String    @id @default(cuid())
+  userAId     String
+  userBId     String
+  acceptedAt  DateTime  @default(now())
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  userA       User      @relation("ConnectionA", fields: [userAId], references: [id])
+  userB       User      @relation("ConnectionB", fields: [userBId], references: [id])
 
   @@unique([userAId, userBId])
 }
