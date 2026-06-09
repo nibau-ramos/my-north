@@ -5,7 +5,7 @@ export type PairingStatus =
   | { status: 'broken' }
   | { status: 'invited'; fromEmail: string }
   | { status: 'pending'; invitedEmail: string; expiresAt: string }
-  | { status: 'linked'; partnerEmail: string; linkedSince: string };
+  | { status: 'linked'; partnerEmail: string; linkedSince: string; partnerOnline: boolean };
 
 export async function getStatus(): Promise<PairingStatus> {
   const { data } = await api.get('/pairing/status');
@@ -35,4 +35,8 @@ export async function cancelInvite(): Promise<PairingStatus> {
 export async function breakLink(): Promise<PairingStatus> {
   const { data } = await api.delete('/pairing/link');
   return data;
+}
+
+export async function sendHeartbeat(): Promise<void> {
+  await api.post('/auth/heartbeat');
 }

@@ -9,6 +9,7 @@ import { CompassIndicator } from '../CompassIndicator';
 import { FlyingHeart } from '../FlyingHeart';
 import InitialButton from '../components/InitialButton';
 import * as pairingService from '../services/pairingService';
+import { sendHeartbeat } from '../services/pairingService';
 import type { PairingStatus } from '../services/pairingService';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 
@@ -88,6 +89,9 @@ export default function MapScreen() {
   useFocusEffect(
     useCallback(() => {
       pairingService.getStatus().then(setPairingStatus).catch(() => {});
+      sendHeartbeat().catch(() => {});
+      const heartbeatTimer = setInterval(() => sendHeartbeat().catch(() => {}), 30_000);
+      return () => clearInterval(heartbeatTimer);
     }, []),
   );
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -473,9 +477,12 @@ export default function MapScreen() {
       <View style={[styles.pairingBadge, { top: insets.top + 12 }]}>
         {pairingStatus?.status === 'linked' ? (
           <>
-            <View style={[styles.pairingDot, styles.pairingDotGreen]} />
+            <View style={[styles.pairingDot, pairingStatus.partnerOnline ? styles.pairingDotGreen : styles.pairingDotRed]} />
             <Text style={styles.pairingText} numberOfLines={1}>
               {pairingStatus.partnerEmail.split('@')[0]}
+            </Text>
+            <Text style={[styles.pairingOnlineText, { color: pairingStatus.partnerOnline ? '#22c55e' : '#e53935' }]}>
+              {pairingStatus.partnerOnline ? 'online' : 'offline'}
             </Text>
           </>
         ) : (
@@ -534,8 +541,16 @@ const styles = StyleSheet.create({
   pairingDotGreen: {
     backgroundColor: '#22c55e',
   },
+  pairingDotRed: {
+    backgroundColor: '#e53935',
+  },
   pairingDotOrange: {
     backgroundColor: '#f97316',
+  },
+  pairingOnlineText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   pairingText: {
     fontSize: 13,

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/requireAuth';
+import { isOnline } from '../presence';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +18,7 @@ export async function getStatus(req: AuthRequest, res: Response) {
 
   if (activeConnection) {
     const partner = activeConnection.userAId === userId ? activeConnection.userB : activeConnection.userA;
-    return res.json({ status: 'linked', partnerEmail: partner.email, linkedSince: activeConnection.acceptedAt });
+    return res.json({ status: 'linked', partnerEmail: partner.email, linkedSince: activeConnection.acceptedAt, partnerOnline: isOnline(partner.id) });
   }
 
   // Incoming invite takes priority over outgoing — it requires a response

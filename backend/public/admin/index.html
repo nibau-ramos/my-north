@@ -75,6 +75,8 @@
     .badge.expired { background: #f3f4f6; color: #6b7280; }
     .badge.cancelada { background: #fee2e2; color: #b91c1c; }
     .badge.ativa { background: #dcfce7; color: #166534; }
+    .badge.online { background: #dcfce7; color: #166534; }
+    .badge.offline { background: #f3f4f6; color: #6b7280; }
     .btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: .82rem; font-weight: 500; }
     .btn-primary { background: #4f46e5; color: #fff; }
     .btn-primary:hover { background: #4338ca; }
@@ -112,8 +114,8 @@
     <!-- Users -->
     <div class="section active" id="tab-users">
       <table>
-        <thead><tr><th>Email</th><th>Google ID</th><th>Auth</th><th>Criado em</th><th>Ações</th></tr></thead>
-        <tbody id="users-body"><tr><td colspan="5" class="empty">A carregar…</td></tr></tbody>
+        <thead><tr><th>Email</th><th>Google ID</th><th>Auth</th><th>Online</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="6" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
 
@@ -208,12 +210,13 @@
       const res = await api('GET', '/users');
       const users = await res.json();
       const tbody = document.getElementById('users-body');
-      if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem utilizadores.</td></tr>'; return; }
+      if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Sem utilizadores.</td></tr>'; return; }
       tbody.innerHTML = users.map(u => `
         <tr>
           <td>${u.email} <span style="font-size:.78rem;color:#9ca3af">(${u.id})</span></td>
           <td>${u.googleId ? '<code>' + u.googleId + '</code>' : '—'}</td>
           <td>${u.passwordHash ? 'Password' : ''}${u.passwordHash && u.googleId ? ' + ' : ''}${u.googleId ? 'Google' : ''}</td>
+          <td><span class="badge ${u.online ? 'online' : 'offline'}">${u.online ? 'online' : 'offline'}</span></td>
           <td>${fmt(u.createdAt)}</td>
           <td><button class="btn btn-danger" onclick="deleteUser('${u.id}','${u.email}')">Remover</button></td>
         </tr>`).join('');

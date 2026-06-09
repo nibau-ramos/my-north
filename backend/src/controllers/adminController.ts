@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { AdminRequest } from '../middleware/requireAdmin';
+import { isOnline } from '../presence';
 
 const prisma = new PrismaClient();
 
@@ -45,7 +46,7 @@ export function getMe(req: AdminRequest, res: Response): void {
 
 export async function getUsers(_req: AdminRequest, res: Response): Promise<void> {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
-  res.json(users);
+  res.json(users.map(u => ({ ...u, online: isOnline(u.id) })));
 }
 
 export async function getInvites(_req: AdminRequest, res: Response): Promise<void> {
