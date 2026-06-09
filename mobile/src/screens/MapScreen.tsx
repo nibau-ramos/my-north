@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Geolocation from '@react-native-community/geolocation';
 import MapView, { PROVIDER_GOOGLE, Polyline, Marker } from 'react-native-maps';
 import CompassHeading from 'react-native-compass-heading';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -163,9 +164,19 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-    }
+    if (Platform.OS !== 'android') return;
+
+    let watchId: number;
+    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION).then(granted => {
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+      watchId = Geolocation.watchPosition(
+        pos => handleLocationUpdate(pos.coords.latitude, pos.coords.longitude),
+        () => {},
+        { enableHighAccuracy: true, distanceFilter: 1 },
+      );
+    });
+    return () => { if (watchId != null) Geolocation.clearWatch(watchId); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -206,8 +217,7 @@ export default function MapScreen() {
     }
   }, [showIndicator, triggerAlignmentZoomOut]);
 
-  const onUserLocationChange = useCallback((event: any) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
+  const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     userLocation.current = { latitude, longitude };
     setUserPos({ latitude, longitude });
 
@@ -247,6 +257,11 @@ export default function MapScreen() {
       }, STEP_MS);
     }, 900);
   }, []);
+
+  const onUserLocationChange = useCallback((event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    handleLocationUpdate(latitude, longitude);
+  }, [handleLocationUpdate]);
 
   const isAligned = showIndicator && Math.abs(angleDiff) < ALIGNED_THRESHOLD;
 
@@ -387,8 +402,8 @@ export default function MapScreen() {
           provider={PROVIDER_GOOGLE}
           style={StyleSheet.absoluteFill}
           initialCamera={{ center: { latitude: 20, longitude: 0 }, heading: initialHeading, pitch: 0, zoom: 2 }}
-          showsUserLocation
-          onUserLocationChange={onUserLocationChange}
+          showsUserLocation={Platform.OS === 'ios'}
+          onUserLocationChange={Platform.OS === 'ios' ? onUserLocationChange : undefined}
           showsMyLocationButton={false}
           showsCompass={false}
           mapPadding={{ top: mapTopPad, right: 0, bottom: 0, left: 0 }}
@@ -410,6 +425,13 @@ export default function MapScreen() {
                 strokeWidth={3}
               />
             </>
+          )}
+          {Platform.OS === 'android' && userPos && (
+            <Marker coordinate={userPos} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={styles.userDotOuter}>
+                <View style={styles.userDotInner} />
+              </View>
+            </Marker>
           )}
           {showIndicator && !showPulse && (
             <Marker coordinate={TARGET} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
@@ -589,6 +611,22 @@ const styles = StyleSheet.create({
   },
   kissEmoji: {
     fontSize: 26,
+  },
+  userDotOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(66,133,244,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userDotInner: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: '#4285F4',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   destinationMarker: {
     width: 38,
