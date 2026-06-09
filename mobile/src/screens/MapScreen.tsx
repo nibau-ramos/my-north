@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, AppState, AppStateStatus, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import MapView, { PROVIDER_GOOGLE, Polyline, Marker } from 'react-native-maps';
 import CompassHeading from 'react-native-compass-heading';
@@ -88,24 +88,49 @@ export default function MapScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { authState } = useAuth();
   const [pairingStatus, setPairingStatus] = useState<PairingStatus | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const pairingStatusRef = useRef<PairingStatus | null>(null);
+
+  useEffect(() => {
+    tokenRef.current = authState.status === 'authenticated' ? authState.token : null;
+  }, [authState]);
+
+  useEffect(() => {
+    pairingStatusRef.current = pairingStatus;
+  }, [pairingStatus]);
+
+  const wsConnect = useCallback((token: string) => {
+    connectWS(token);
+    onPartnerStatus(online => {
+      setPairingStatus(prev =>
+        prev?.status === 'linked' ? { ...prev, partnerOnline: online } : prev,
+      );
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      const token = authState.status === 'authenticated' ? authState.token : null;
+      const token = tokenRef.current;
       pairingService.getStatus().then(s => {
         setPairingStatus(s);
-        if (s.status === 'linked' && token) {
-          connectWS(token);
-          onPartnerStatus(online => {
-            setPairingStatus(prev =>
-              prev?.status === 'linked' ? { ...prev, partnerOnline: online } : prev,
-            );
-          });
-        }
+        if (s.status === 'linked' && token) wsConnect(token);
       }).catch(() => {});
       return () => disconnectWS();
-    }, [authState]),
+    }, [wsConnect]),
   );
+
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        const token = tokenRef.current;
+        if (token && pairingStatusRef.current?.status === 'linked') wsConnect(token);
+      } else {
+        disconnectWS();
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppState);
+    return () => sub.remove();
+  }, [wsConnect]);
   const { width: screenW, height: screenH } = useWindowDimensions();
   const mapTopPad = Math.round(screenH * 0.3);
   const dotY = screenH / 2 + mapTopPad / 2;
