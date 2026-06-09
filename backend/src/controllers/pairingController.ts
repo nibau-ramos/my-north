@@ -68,7 +68,7 @@ export async function sendInvite(req: AuthRequest, res: Response) {
     // Remove any previous cancelled connection between this pair before creating a new one
     await prisma.connection.deleteMany({ where: { userAId: a, userBId: b } });
 
-    await prisma.connection.create({ data: { userAId: a, userBId: b } });
+    await prisma.connection.create({ data: { userAId: a, userBId: b, acceptedAt: new Date() } });
     await prisma.invite.deleteMany({ where: { id: mutual.id } });
     await prisma.invite.deleteMany({ where: { fromUserId: userId } });
     return res.json({ status: 'linked', partnerEmail: targetEmail });

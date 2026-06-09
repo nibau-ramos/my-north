@@ -32,7 +32,7 @@ model Connection {
   id          String    @id @default(cuid())
   userAId     String
   userBId     String
-  acceptedAt  DateTime  @default(now())
+  acceptedAt  DateTime
   cancelledAt DateTime?
   createdAt   DateTime  @default(now())
   userA       User      @relation("ConnectionA", fields: [userAId], references: [id])
