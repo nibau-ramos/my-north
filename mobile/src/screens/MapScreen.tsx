@@ -385,6 +385,7 @@ export default function MapScreen() {
           initialCamera={{ center: { latitude: 20, longitude: 0 }, heading: initialHeading, pitch: 0, zoom: 2 }}
           showsUserLocation
           onUserLocationChange={onUserLocationChange}
+          showsMyLocationButton={false}
           showsCompass={false}
           mapPadding={{ top: mapTopPad, right: 0, bottom: 0, left: 0 }}
           scrollEnabled={false}
