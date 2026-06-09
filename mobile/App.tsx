@@ -23,8 +23,8 @@ export default function App() {
         <NavigationContainer>
           <RootNavigator />
         </NavigationContainer>
+        <DevBanner />
       </AuthProvider>
-      <DevBanner />
     </SafeAreaProvider>
   );
 }
