@@ -76,16 +76,20 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { googleId, email } = await verifyGoogleToken(idToken);
+  try {
+    const { googleId, email } = await verifyGoogleToken(idToken);
 
-  const user = await prisma.user.upsert({
-    where: { googleId },
-    update: {},
-    create: { email, googleId },
-  });
+    const user = await prisma.user.upsert({
+      where: { googleId },
+      update: {},
+      create: { email, googleId },
+    });
 
-  const token = signToken({ sub: user.id, email: user.email });
-  res.json({ token, user: { id: user.id, email: user.email, provider: getProvider(user) } });
+    const token = signToken({ sub: user.id, email: user.email });
+    res.json({ token, user: { id: user.id, email: user.email, provider: getProvider(user) } });
+  } catch {
+    res.status(401).json({ error: 'Invalid Google token' });
+  }
 }
 
 export async function me(req: AuthRequest, res: Response): Promise<void> {
