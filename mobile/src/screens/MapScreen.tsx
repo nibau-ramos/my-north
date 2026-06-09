@@ -464,9 +464,7 @@ export default function MapScreen() {
           )}
           {Platform.OS === 'android' && userPos && (
             <Marker coordinate={userPos} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.userDotOuter}>
-                <View style={styles.userDotInner} />
-              </View>
+              <View style={styles.userDot} />
             </Marker>
           )}
           {showIndicator && !showPulse && (
@@ -648,20 +646,12 @@ const styles = StyleSheet.create({
   kissEmoji: {
     fontSize: 26,
   },
-  userDotOuter: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(66,133,244,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  userDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#4285F4',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#fff',
   },
   destinationMarker: {
