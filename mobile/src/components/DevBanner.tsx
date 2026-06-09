@@ -2,13 +2,19 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BASE_URL } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function DevBanner() {
   if (!__DEV__) return null;
   const { bottom } = useSafeAreaInsets();
-  const label = Platform.OS === 'android'
-    ? `DEV · ${BASE_URL} (adb reverse)`
-    : `DEV · ${BASE_URL}`;
+  const { authState } = useAuth();
+  const email = authState.status === 'authenticated' ? authState.user.email : null;
+
+  const apiLabel = Platform.OS === 'android'
+    ? `${BASE_URL} (adb reverse)`
+    : BASE_URL;
+  const label = email ? `DEV · ${apiLabel} · ${email}` : `DEV · ${apiLabel}`;
+
   return (
     <View style={[styles.bar, { paddingBottom: bottom + 4 }]}>
       <Text style={styles.text}>{label}</Text>
