@@ -1,8 +1,12 @@
+import http from 'http';
 import { config } from './config';
 import { createApp } from './app';
+import { attachWS } from './ws';
 
 const app = createApp();
+const server = http.createServer(app);
+attachWS(server);
 
-app.listen(config.port, () => {
+server.listen(config.port, () => {
   console.log(`Backend running on port ${config.port}`);
 });

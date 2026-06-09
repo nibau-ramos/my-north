@@ -4,7 +4,6 @@ import { hashPassword, comparePassword } from '../services/passwordService';
 import { signToken } from '../services/tokenService';
 import { verifyGoogleToken } from '../services/googleService';
 import { AuthRequest } from '../middleware/requireAuth';
-import { touch } from '../presence';
 
 const prisma = new PrismaClient();
 
@@ -131,11 +130,6 @@ export async function changePassword(req: AuthRequest, res: Response): Promise<v
   await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
 
   res.json({ success: true });
-}
-
-export function heartbeat(req: AuthRequest, res: Response): void {
-  touch(req.user!.sub);
-  res.json({ ok: true });
 }
 
 export async function deleteAccount(req: AuthRequest, res: Response): Promise<void> {

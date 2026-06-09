@@ -36,7 +36,3 @@ export async function breakLink(): Promise<PairingStatus> {
   const { data } = await api.delete('/pairing/link');
   return data;
 }
-
-export async function sendHeartbeat(): Promise<void> {
-  await api.post('/auth/heartbeat');
-}

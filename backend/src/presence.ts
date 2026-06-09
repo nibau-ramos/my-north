@@ -1,12 +1,22 @@
-const store = new Map<string, number>();
+import { WebSocket } from 'ws';
 
-const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+const connections = new Map<string, WebSocket>();
 
-export function touch(userId: string): void {
-  store.set(userId, Date.now());
+export function connect(userId: string, ws: WebSocket): void {
+  connections.set(userId, ws);
+}
+
+export function disconnect(userId: string): void {
+  connections.delete(userId);
 }
 
 export function isOnline(userId: string): boolean {
-  const ts = store.get(userId);
-  return ts != null && Date.now() - ts < ONLINE_THRESHOLD_MS;
+  return connections.has(userId);
+}
+
+export function notifyPartner(partnerId: string, online: boolean): void {
+  const ws = connections.get(partnerId);
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'partner_status', online }));
+  }
 }

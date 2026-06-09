@@ -10,8 +10,9 @@ import { CompassIndicator } from '../CompassIndicator';
 import { FlyingHeart } from '../FlyingHeart';
 import InitialButton from '../components/InitialButton';
 import * as pairingService from '../services/pairingService';
-import { sendHeartbeat } from '../services/pairingService';
 import type { PairingStatus } from '../services/pairingService';
+import { connectWS, disconnectWS, onPartnerStatus } from '../services/wsService';
+import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 
 const TARGET = {
@@ -85,15 +86,25 @@ interface HeartEntry {
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { authState } = useAuth();
   const [pairingStatus, setPairingStatus] = useState<PairingStatus | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      pairingService.getStatus().then(setPairingStatus).catch(() => {});
-      sendHeartbeat().catch(() => {});
-      const heartbeatTimer = setInterval(() => sendHeartbeat().catch(() => {}), 30_000);
-      return () => clearInterval(heartbeatTimer);
-    }, []),
+      const token = authState.status === 'authenticated' ? authState.token : null;
+      pairingService.getStatus().then(s => {
+        setPairingStatus(s);
+        if (s.status === 'linked' && token) {
+          connectWS(token);
+          onPartnerStatus(online => {
+            setPairingStatus(prev =>
+              prev?.status === 'linked' ? { ...prev, partnerOnline: online } : prev,
+            );
+          });
+        }
+      }).catch(() => {});
+      return () => disconnectWS();
+    }, [authState]),
   );
   const { width: screenW, height: screenH } = useWindowDimensions();
   const mapTopPad = Math.round(screenH * 0.3);
