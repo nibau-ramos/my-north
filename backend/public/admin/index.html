@@ -380,11 +380,29 @@
 
     const loaders = { users: loadUsers, invites: loadInvites, connections: loadConnections, admins: loadAdmins };
 
+    // Auto-refresh users tab every 5s to keep online/offline status current
+    let activeTab = 'users';
+    let refreshTimer = null;
+
+    function startRefresh(tab) {
+      clearInterval(refreshTimer);
+      activeTab = tab;
+      if (tab === 'users') {
+        refreshTimer = setInterval(loadUsers, 5000);
+      }
+    }
+
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.addEventListener('click', () => startRefresh(btn.dataset.tab));
+    });
+
     // Load current admin ID then restore tab from hash
     let currentAdminId = null;
     api('GET', '/me').then(r => r.json()).then(d => {
       currentAdminId = d.id;
-      activateTab(location.hash.slice(1) || 'users');
+      const initialTab = location.hash.slice(1) || 'users';
+      activateTab(initialTab);
+      startRefresh(initialTab);
     });
   </script>
 </body>
