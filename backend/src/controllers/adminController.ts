@@ -53,26 +53,7 @@ export async function getInvites(_req: AdminRequest, res: Response): Promise<voi
     include: { fromUser: { select: { id: true, email: true } } },
     orderBy: { createdAt: 'desc' },
   });
-
-  const connections = await prisma.connection.findMany();
-  const connectedUserIds = new Set(
-    connections.flatMap(c => [c.userAId, c.userBId])
-  );
-
-  const now = new Date();
-  const result = invites.map(inv => {
-    let status: 'accepted' | 'expired' | 'pending';
-    if (connectedUserIds.has(inv.fromUserId)) {
-      status = 'accepted';
-    } else if (inv.expiresAt < now) {
-      status = 'expired';
-    } else {
-      status = 'pending';
-    }
-    return { ...inv, status };
-  });
-
-  res.json(result);
+  res.json(invites);
 }
 
 export async function getConnections(_req: AdminRequest, res: Response): Promise<void> {

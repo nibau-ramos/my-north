@@ -14,18 +14,28 @@ model User {
   googleId     String?      @unique
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
-  sentInvite   Invite?      @relation("SentInvite")
+  sentInvites  Invite[]     @relation("SentInvite")
   connectionsA Connection[] @relation("ConnectionA")
   connectionsB Connection[] @relation("ConnectionB")
 }
 
+enum InviteStatus {
+  pending
+  accepted
+  rejected
+  cancelled
+  superseded
+}
+
 model Invite {
-  id         String   @id @default(cuid())
-  fromUserId String   @unique
+  id         String       @id @default(cuid())
+  fromUserId String
   toEmail    String
   expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  fromUser   User     @relation("SentInvite", fields: [fromUserId], references: [id])
+  status     InviteStatus @default(pending)
+  resolvedAt DateTime?
+  createdAt  DateTime     @default(now())
+  fromUser   User         @relation("SentInvite", fields: [fromUserId], references: [id])
 }
 
 model Connection {

@@ -69,6 +69,9 @@
     }
     .badge.pending { background: #fef9c3; color: #854d0e; }
     .badge.accepted { background: #dcfce7; color: #166534; }
+    .badge.rejected { background: #fee2e2; color: #b91c1c; }
+    .badge.cancelled { background: #f3f4f6; color: #6b7280; }
+    .badge.superseded { background: #ede9fe; color: #5b21b6; }
     .badge.expired { background: #f3f4f6; color: #6b7280; }
     .badge.cancelada { background: #fee2e2; color: #b91c1c; }
     .badge.ativa { background: #dcfce7; color: #166534; }
@@ -117,7 +120,7 @@
     <!-- Invites -->
     <div class="section" id="tab-invites">
       <table>
-        <thead><tr><th>De</th><th>Para (email)</th><th>ID</th><th>Estado</th><th>Expira em</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <thead><tr><th>De</th><th>Para (email)</th><th>Estado</th><th>Criado em</th><th>Expira em</th><th>Resolvido em</th><th>ID</th></tr></thead>
         <tbody id="invites-body"><tr><td colspan="7" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
@@ -216,6 +219,8 @@
         </tr>`).join('');
     }
 
+    const inviteStatusPT = { pending: 'pendente', accepted: 'aceite', rejected: 'rejeitado', cancelled: 'cancelado', superseded: 'substituído' };
+
     // --- Invites ---
     async function loadInvites() {
       const res = await api('GET', '/invites');
@@ -226,11 +231,11 @@
         <tr>
           <td>${i.fromUser.email}</td>
           <td>${i.toEmail}</td>
-          <td><code>${i.id}</code></td>
-          <td><span class="badge ${i.status}">${i.status}</span></td>
-          <td>${fmt(i.expiresAt)}</td>
+          <td><span class="badge ${i.status}">${inviteStatusPT[i.status] ?? i.status}</span></td>
           <td>${fmt(i.createdAt)}</td>
-          <td><button class="btn btn-danger" onclick="deleteInvite('${i.id}')">Remover</button></td>
+          <td>${fmt(i.expiresAt)}</td>
+          <td>${i.resolvedAt ? fmt(i.resolvedAt) : '—'}</td>
+          <td><code>${i.id}</code></td>
         </tr>`).join('');
     }
 
