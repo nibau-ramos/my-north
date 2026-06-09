@@ -125,7 +125,7 @@
     <!-- Connections -->
     <div class="section" id="tab-connections">
       <table>
-        <thead><tr><th>ID</th><th>Utilizador A</th><th>Utilizador B</th><th>Estado</th><th>Aceite em</th><th>Cancelado em</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <thead><tr><th>ID</th><th>Convidou (A)</th><th>Convidado (B)</th><th>Estado</th><th>Criado em</th><th>Aceite em</th><th>Cancelado em</th><th>Ações</th></tr></thead>
         <tbody id="connections-body"><tr><td colspan="8" class="empty">A carregar…</td></tr></tbody>
       </table>
     </div>
@@ -245,10 +245,10 @@
           <td><code>${c.id}</code></td>
           <td>${c.userA.email}</td>
           <td>${c.userB.email}</td>
-          <td><span class="badge ${c.cancelledAt ? 'expired' : 'accepted'}">${c.cancelledAt ? 'cancelada' : 'ativa'}</span></td>
-          <td>${fmt(c.acceptedAt)}</td>
-          <td>${c.cancelledAt ? fmt(c.cancelledAt) : '—'}</td>
+          <td><span class="badge ${c.cancelledAt ? 'cancelada' : 'ativa'}">${c.cancelledAt ? 'cancelada' : 'ativa'}</span></td>
           <td>${fmt(c.createdAt)}</td>
+          <td>${c.acceptedAt ? fmt(c.acceptedAt) : '—'}</td>
+          <td>${c.cancelledAt ? fmt(c.cancelledAt) : '—'}</td>
           <td><button class="btn btn-danger" onclick="deleteConnection('${c.id}')">Remover</button></td>
         </tr>`).join('');
     }

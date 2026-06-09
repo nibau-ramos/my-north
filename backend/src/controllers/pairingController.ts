@@ -63,12 +63,21 @@ export async function sendInvite(req: AuthRequest, res: Response) {
   });
 
   if (mutual && mutual.fromUser.email.toLowerCase() === targetEmail) {
-    const [a, b] = [userId, mutual.fromUserId].sort();
+    // userA = who sent the first invite (the initiator), userB = who accepted (current user)
+    const inviterUserId = mutual.fromUserId;
+    const invitedUserId = userId;
 
-    // Remove any previous cancelled connection between this pair before creating a new one
-    await prisma.connection.deleteMany({ where: { userAId: a, userBId: b } });
+    // Clean up any previous cancelled connection between this pair in either direction
+    await prisma.connection.deleteMany({
+      where: {
+        OR: [
+          { userAId: inviterUserId, userBId: invitedUserId },
+          { userAId: invitedUserId, userBId: inviterUserId },
+        ],
+      },
+    });
 
-    await prisma.connection.create({ data: { userAId: a, userBId: b, acceptedAt: new Date() } });
+    await prisma.connection.create({ data: { userAId: inviterUserId, userBId: invitedUserId, acceptedAt: new Date() } });
     await prisma.invite.deleteMany({ where: { id: mutual.id } });
     await prisma.invite.deleteMany({ where: { fromUserId: userId } });
     return res.json({ status: 'linked', partnerEmail: targetEmail });
