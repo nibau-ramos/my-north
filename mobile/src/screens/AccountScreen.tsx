@@ -88,7 +88,7 @@ export default function AccountScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Terminar ligação',
+          text: 'Quebrar ligação',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -191,6 +191,9 @@ export default function AccountScreen() {
         {pairingStatus?.status === 'linked' && (
           <View style={[styles.section, styles.sectionBorder]}>
             <Text style={styles.sectionTitle}>A Minha Ligação</Text>
+            <Text style={styles.sectionHint}>
+              A tua ligação é a pessoa com quem partilhas esta experiência. Enquanto estiverem ligados, ambos podem ver a direção um do outro no mapa.
+            </Text>
             <View style={styles.connectionCard}>
               <Text style={styles.connectionLabel}>Ligado a</Text>
               <Text style={styles.connectionEmail}>{pairingStatus.partnerEmail}</Text>
@@ -198,8 +201,11 @@ export default function AccountScreen() {
                 desde {formatDate(pairingStatus.linkedSince)}
               </Text>
             </View>
+            <Text style={styles.actionHint}>
+              Ao quebrar a ligação deixas de partilhar a experiência com esta pessoa. Podes sempre criar uma nova ligação mais tarde.
+            </Text>
             <Pressable style={[styles.button, styles.buttonOutlineDanger]} onPress={confirmBreakLink}>
-              <Text style={styles.buttonDangerText}>Terminar Ligação</Text>
+              <Text style={styles.buttonDangerText}>Quebrar a ligação com este utilizador</Text>
             </Pressable>
           </View>
         )}
@@ -207,6 +213,9 @@ export default function AccountScreen() {
         {/* Section 3: Session */}
         <View style={[styles.section, styles.sectionBorder]}>
           <Text style={styles.sectionTitle}>Sessão</Text>
+          <Text style={styles.sectionHint}>
+            Termina a sessão neste dispositivo. Os teus dados e ligação são mantidos — podes voltar a entrar quando quiseres.
+          </Text>
           <Pressable style={styles.button} onPress={logout}>
             <Text style={styles.buttonText}>Terminar Sessão</Text>
           </Pressable>
@@ -429,6 +438,18 @@ const styles = StyleSheet.create({
   connectionSince: {
     fontSize: 13,
     color: '#888',
+  },
+  sectionHint: {
+    fontSize: 14,
+    color: '#888',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  actionHint: {
+    fontSize: 13,
+    color: '#aaa',
+    lineHeight: 18,
+    marginBottom: 12,
   },
   deleteHint: {
     fontSize: 14,
