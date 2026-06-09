@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Polyline, Marker } from 'react-native-maps';
 import CompassHeading from 'react-native-compass-heading';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -156,6 +156,12 @@ export default function MapScreen() {
         isZoomingOut.current = false;
       }
     }, STEP_MS);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+    }
   }, []);
 
   useEffect(() => {
