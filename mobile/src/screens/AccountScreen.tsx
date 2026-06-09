@@ -15,11 +15,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import * as authService from '../services/authService';
+import * as pairingService from '../services/pairingService';
+import { usePairingGate } from '../navigation/RootNavigator';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { authState, logout } = useAuth();
+  const { onUnlinked } = usePairingGate();
 
   const user = authState.status === 'authenticated' ? authState.user : null;
   const isEmailUser = user?.provider === 'email';
@@ -75,6 +78,29 @@ export default function AccountScreen() {
               await logout();
             } catch {
               Alert.alert('Erro', 'Não foi possível encerrar a conta. Tenta novamente.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function confirmBreakLink() {
+    Alert.alert(
+      'Terminar ligação',
+      'Tens a certeza que queres terminar a ligação com o teu parceiro?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Terminar ligação',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await pairingService.breakLink();
+              navigation.goBack();
+              onUnlinked();
+            } catch {
+              Alert.alert('Erro', 'Não foi possível terminar a ligação. Tenta novamente.');
             }
           },
         },
@@ -172,9 +198,13 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* Delete account */}
+        {/* Danger zone */}
         <View style={[styles.section, styles.dangerSection]}>
           <Text style={styles.dangerTitle}>Zona de Perigo</Text>
+          <Pressable style={styles.dangerButton} onPress={confirmBreakLink}>
+            <Text style={styles.dangerButtonText}>Terminar Ligação</Text>
+          </Pressable>
+          <View style={{ height: 12 }} />
           <Pressable style={styles.dangerButton} onPress={confirmDeleteAccount}>
             <Text style={styles.dangerButtonText}>Encerrar Conta</Text>
           </Pressable>

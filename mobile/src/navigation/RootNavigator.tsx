@@ -16,7 +16,6 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Map: undefined;
-  Pairing: undefined;
   Account: undefined;
 };
 
@@ -84,7 +83,6 @@ export default function RootNavigator() {
     <PairingGateContext.Provider value={{ onLinked: () => {}, onUnlinked: () => setPhase('unlinked') }}>
       <LinkedStack.Navigator screenOptions={{ headerShown: false }}>
         <LinkedStack.Screen name="Map" component={MapScreen} />
-        <LinkedStack.Screen name="Pairing" component={PairingScreen} />
         <LinkedStack.Screen name="Account" component={AccountScreen} />
       </LinkedStack.Navigator>
     </PairingGateContext.Provider>

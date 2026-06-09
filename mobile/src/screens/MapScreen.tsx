@@ -464,10 +464,7 @@ export default function MapScreen() {
         <Text style={styles.accountButtonText}>👤</Text>
       </Pressable>
 
-      <Pressable
-        style={[styles.pairingBadge, { top: insets.top + 12 }]}
-        onPress={() => navigation.navigate('Pairing')}
-      >
+      <View style={[styles.pairingBadge, { top: insets.top + 12 }]}>
         {pairingStatus?.status === 'linked' ? (
           <>
             <View style={[styles.pairingDot, styles.pairingDotGreen]} />
@@ -475,15 +472,10 @@ export default function MapScreen() {
               {pairingStatus.partnerEmail.split('@')[0]}
             </Text>
           </>
-        ) : pairingStatus?.status === 'pending' ? (
-          <>
-            <View style={[styles.pairingDot, styles.pairingDotOrange]} />
-            <Text style={styles.pairingText}>Pending</Text>
-          </>
         ) : (
           <Text style={styles.pairingTextEmpty}>♡</Text>
         )}
-      </Pressable>
+      </View>
 
       {isAligned && (
         <View pointerEvents="box-none" style={styles.kissButtonContainer}>
