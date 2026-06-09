@@ -7,6 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompassIndicator } from '../CompassIndicator';
 import { FlyingHeart } from '../FlyingHeart';
+import InitialButton from '../components/InitialButton';
 import * as pairingService from '../services/pairingService';
 import type { PairingStatus } from '../services/pairingService';
 import type { AppStackParamList } from '../navigation/RootNavigator';
@@ -457,12 +458,10 @@ export default function MapScreen() {
         </View>
       )}
 
-      <Pressable
-        style={[styles.accountButton, { top: insets.top + 12 }]}
+      <InitialButton
+        style={{ position: 'absolute', right: 16, top: insets.top + 12 }}
         onPress={() => navigation.navigate('Account')}
-      >
-        <Text style={styles.accountButtonText}>👤</Text>
-      </Pressable>
+      />
 
       <View style={[styles.pairingBadge, { top: insets.top + 12 }]}>
         {pairingStatus?.status === 'linked' ? (
@@ -508,19 +507,6 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  accountButton: {
-    position: 'absolute',
-    right: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accountButtonText: {
-    fontSize: 17,
-  },
   pairingBadge: {
     position: 'absolute',
     left: 16,

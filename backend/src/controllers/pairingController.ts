@@ -15,7 +15,7 @@ export async function getStatus(req: AuthRequest, res: Response) {
 
   if (activeConnection) {
     const partner = activeConnection.userAId === userId ? activeConnection.userB : activeConnection.userA;
-    return res.json({ status: 'linked', partnerEmail: partner.email });
+    return res.json({ status: 'linked', partnerEmail: partner.email, linkedSince: activeConnection.acceptedAt });
   }
 
   // Incoming invite takes priority over outgoing — it requires a response

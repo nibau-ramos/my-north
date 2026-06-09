@@ -11,13 +11,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePairingGate } from '../navigation/RootNavigator';
+import type { LobbyStackParamList } from '../navigation/RootNavigator';
+import InitialButton from '../components/InitialButton';
 import * as pairingService from '../services/pairingService';
 import type { PairingStatus } from '../services/pairingService';
 
 export default function PairingScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<LobbyStackParamList>>();
   const { onLinked, onUnlinked } = usePairingGate();
 
   const [status, setStatus] = useState<PairingStatus | null>(null);
@@ -123,6 +126,11 @@ export default function PairingScreen() {
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <InitialButton
+        style={{ position: 'absolute', right: 16, top: insets.top + 12 }}
+        onPress={() => navigation.navigate('Account')}
+      />
+
       {canGoBack && (
         <Pressable style={styles.back} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>← Voltar</Text>

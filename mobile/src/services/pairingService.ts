@@ -5,7 +5,7 @@ export type PairingStatus =
   | { status: 'broken' }
   | { status: 'invited'; fromEmail: string }
   | { status: 'pending'; invitedEmail: string; expiresAt: string }
-  | { status: 'linked'; partnerEmail: string };
+  | { status: 'linked'; partnerEmail: string; linkedSince: string };
 
 export async function getStatus(): Promise<PairingStatus> {
   const { data } = await api.get('/pairing/status');

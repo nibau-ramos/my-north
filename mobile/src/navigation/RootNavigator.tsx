@@ -33,9 +33,14 @@ export function usePairingGate() {
   return useContext(PairingGateContext);
 }
 
+export type LobbyStackParamList = {
+  Pairing: undefined;
+  Account: undefined;
+};
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const LinkedStack = createNativeStackNavigator<AppStackParamList>();
-const UnlinkedStack = createNativeStackNavigator<{ Pairing: undefined }>();
+const UnlinkedStack = createNativeStackNavigator<LobbyStackParamList>();
 
 type Phase = 'loading' | 'unauthenticated' | 'unlinked' | 'linked';
 
@@ -74,6 +79,7 @@ export default function RootNavigator() {
       <PairingGateContext.Provider value={{ onLinked: () => setPhase('linked'), onUnlinked: () => {} }}>
         <UnlinkedStack.Navigator screenOptions={{ headerShown: false }}>
           <UnlinkedStack.Screen name="Pairing" component={PairingScreen} />
+          <UnlinkedStack.Screen name="Account" component={AccountScreen} />
         </UnlinkedStack.Navigator>
       </PairingGateContext.Provider>
     );

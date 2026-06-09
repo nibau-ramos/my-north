@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import * as authService from '../services/authService';
 import * as pairingService from '../services/pairingService';
+import type { PairingStatus } from '../services/pairingService';
 import { usePairingGate } from '../navigation/RootNavigator';
 
 export default function AccountScreen() {
@@ -33,6 +35,22 @@ export default function AccountScreen() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
   const [pwdSuccess, setPwdSuccess] = useState('');
+
+  const [pairingStatus, setPairingStatus] = useState<PairingStatus | null>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  useEffect(() => {
+    pairingService.getStatus().then(setPairingStatus).catch(() => {});
+  }, []);
+
+  function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('pt-PT', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
 
   async function handleChangePassword() {
     setPwdError('');
@@ -63,28 +81,6 @@ export default function AccountScreen() {
     }
   }
 
-  function confirmDeleteAccount() {
-    Alert.alert(
-      'Encerrar conta',
-      'Tens a certeza? Esta ação é irreversível e todos os teus dados serão eliminados.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Encerrar conta',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await authService.deleteAccount();
-              await logout();
-            } catch {
-              Alert.alert('Erro', 'Não foi possível encerrar a conta. Tenta novamente.');
-            }
-          },
-        },
-      ],
-    );
-  }
-
   function confirmBreakLink() {
     Alert.alert(
       'Terminar ligação',
@@ -108,11 +104,16 @@ export default function AccountScreen() {
     );
   }
 
-  function confirmLogout() {
-    Alert.alert('Terminar sessão', 'Tens a certeza que queres sair?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: logout },
-    ]);
+  async function handleDeleteAccount() {
+    setDeleteLoading(true);
+    try {
+      await authService.deleteAccount();
+      setDeleteModalVisible(false);
+      await logout();
+    } catch {
+      setDeleteLoading(false);
+      Alert.alert('Erro', 'Não foi possível encerrar a conta. Tenta novamente.');
+    }
   }
 
   return (
@@ -131,13 +132,11 @@ export default function AccountScreen() {
 
         <Text style={styles.title}>A Minha Conta</Text>
 
-        {/* Profile details */}
+        {/* Section 1: Profile */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Email</Text>
           <Text style={styles.cardValue}>{user?.email ?? '—'}</Text>
-
           <View style={styles.divider} />
-
           <Text style={styles.cardLabel}>Conta</Text>
           <View style={styles.providerRow}>
             <View style={[styles.providerBadge, user?.provider === 'google' ? styles.badgeGoogle : styles.badgeEmail]}>
@@ -148,11 +147,10 @@ export default function AccountScreen() {
           </View>
         </View>
 
-        {/* Change password — only for email users */}
+        {/* Change password — email users only */}
         {isEmailUser && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Alterar Password</Text>
-
             <TextInput
               style={styles.input}
               placeholder="Password atual"
@@ -177,10 +175,8 @@ export default function AccountScreen() {
               onChangeText={setConfirmPwd}
               secureTextEntry
             />
-
             {pwdError ? <Text style={styles.errorText}>{pwdError}</Text> : null}
             {pwdSuccess ? <Text style={styles.successText}>{pwdSuccess}</Text> : null}
-
             <Pressable style={styles.button} onPress={handleChangePassword} disabled={pwdLoading}>
               {pwdLoading ? (
                 <ActivityIndicator color="#ff4d6d" />
@@ -191,27 +187,83 @@ export default function AccountScreen() {
           </View>
         )}
 
-        {/* Logout */}
-        <View style={styles.section}>
-          <Pressable style={styles.button} onPress={confirmLogout}>
+        {/* Section 2: Connection */}
+        {pairingStatus?.status === 'linked' && (
+          <View style={[styles.section, styles.sectionBorder]}>
+            <Text style={styles.sectionTitle}>A Minha Ligação</Text>
+            <View style={styles.connectionCard}>
+              <Text style={styles.connectionLabel}>Ligado a</Text>
+              <Text style={styles.connectionEmail}>{pairingStatus.partnerEmail}</Text>
+              <Text style={styles.connectionSince}>
+                desde {formatDate(pairingStatus.linkedSince)}
+              </Text>
+            </View>
+            <Pressable style={[styles.button, styles.buttonOutlineDanger]} onPress={confirmBreakLink}>
+              <Text style={styles.buttonDangerText}>Terminar Ligação</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Section 3: Session */}
+        <View style={[styles.section, styles.sectionBorder]}>
+          <Text style={styles.sectionTitle}>Sessão</Text>
+          <Pressable style={styles.button} onPress={logout}>
             <Text style={styles.buttonText}>Terminar Sessão</Text>
           </Pressable>
         </View>
 
-        {/* Danger zone */}
-        <View style={[styles.section, styles.dangerSection]}>
-          <Text style={styles.dangerTitle}>Zona de Perigo</Text>
-          <Pressable style={styles.dangerButton} onPress={confirmBreakLink}>
-            <Text style={styles.dangerButtonText}>Terminar Ligação</Text>
-          </Pressable>
-          <View style={{ height: 12 }} />
-          <Pressable style={styles.dangerButton} onPress={confirmDeleteAccount}>
-            <Text style={styles.dangerButtonText}>Encerrar Conta</Text>
+        {/* Section 4: Delete account */}
+        <View style={[styles.section, styles.sectionBorder]}>
+          <Text style={styles.sectionTitle}>Encerrar Conta</Text>
+          <Text style={styles.deleteHint}>
+            Caso pretendas encerrar a tua conta, podes utilizar o botão abaixo. Esta ação é permanente e imediata.
+          </Text>
+          <Pressable style={[styles.button, styles.buttonOutlineDanger]} onPress={() => setDeleteModalVisible(true)}>
+            <Text style={styles.buttonDangerText}>Encerrar Conta</Text>
           </Pressable>
         </View>
 
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>
+
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleteLoading && setDeleteModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => !deleteLoading && setDeleteModalVisible(false)}
+        >
+          <Pressable style={styles.modalBox} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Encerrar conta</Text>
+            <Text style={styles.modalBody}>
+              Ao encerrar a conta vais cancelar todas as tuas ligações a pessoas e perder todos os
+              dados da conta. Esta ação é imediata e irreversível — não guardamos dados nos nossos
+              servidores após o encerramento.
+            </Text>
+            <Pressable
+              style={[styles.modalButtonDanger, deleteLoading && styles.buttonDisabled]}
+              onPress={handleDeleteAccount}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalButtonDangerText}>Encerrar Conta</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.modalButtonCancel}
+              onPress={() => setDeleteModalVisible(false)}
+              disabled={deleteLoading}
+            >
+              <Text style={styles.modalButtonCancelText}>Cancelar</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -287,6 +339,11 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionBorder: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 24,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -319,6 +376,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  buttonOutlineDanger: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#e53935',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonDangerText: {
+    color: '#e53935',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   errorText: {
     color: '#e53935',
     fontSize: 14,
@@ -329,31 +404,89 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 10,
   },
-  dangerSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#fce8e6',
-    paddingTop: 24,
-  },
-  dangerTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#e53935',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  connectionCard: {
+    backgroundColor: '#fafafa',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#eee',
+    padding: 16,
     marginBottom: 16,
   },
-  dangerButton: {
+  connectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  connectionEmail: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  connectionSince: {
+    fontSize: 13,
+    color: '#888',
+  },
+  deleteHint: {
+    fontSize: 14,
+    color: '#888',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalBox: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+  },
+  modalBody: {
+    fontSize: 15,
+    color: '#555',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalButtonDanger: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#e53935',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  modalButtonDangerText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalButtonCancel: {
     width: '100%',
     height: 50,
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#e53935',
+    borderColor: '#ddd',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dangerButtonText: {
-    color: '#e53935',
+  modalButtonCancelText: {
+    color: '#555',
     fontSize: 16,
     fontWeight: '600',
   },
